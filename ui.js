@@ -1,123 +1,156 @@
+// ui.js
 import { currentUser } from "./auth.js";
-import { getReadings, getReadingsByDate, getAssignments, todayStr } from "./api.js";
+import {
+  getReadings,
+  getAssignedPatients,
+  getPatient
+} from "./api.js";
 
-const rootId = "app";
-
-function kpiCard(title, value, unit, subtitle=""){
-  return `
-    <div class="card">
-      <h3>${title}</h3>
-      <p style="font-size:2.2rem;margin:6px 0">${value ?? "—"}${value != null && unit ? " " + unit : ""}</p>
-      ${subtitle ? `<small>${subtitle}</small>` : ""}
-    </div>
-  `;
-}
-function latestNonNull(rows, fields){
-  const sorted = [...rows].sort((a,b)=>a.date.localeCompare(b.date));
-  for (let i = sorted.length - 1; i >= 0; i--){
-    const r = sorted[i];
-    if (fields.some(f => r[f] != null)) return r;
-  }
-  return null;
+function todayStr() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(
+    2,
+    "0"
+  )}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
-async function renderPatientDashboard(user){
-  const today = todayStr();
-  const all = await getReadings(user.id);
-
-  if (!all.length) {
-    const { seedDemoReadings } = await import("./api.js");
-    document.getElementById(rootId).innerHTML = `
-      <section class="card">
-        <h3>No readings yet</h3>
-        <p class="muted">Click below to create sample readings for the demo.</p>
-        <button id="genReads" class="btn-primary">Generate sample readings</button>
-      </section>`;
-    document.getElementById("genReads").addEventListener("click", ()=>{
-      seedDemoReadings(user.id);
-      location.reload();
-    });
-    return;
-  }
-
-  const todayRow = all.find(r => r.date === today);
-  const bpRow = todayRow ?? latestNonNull(all, ["bp_systolic","bp_diastolic"]);
-  const hrRow = todayRow ?? latestNonNull(all, ["hr"]);
-  const stRow = todayRow ?? latestNonNull(all, ["steps"]);
-
-  const kpis = `
-    <section class="grid kpis">
-      ${kpiCard("Blood Pressure", bpRow ? `${bpRow.bp_systolic ?? "—"}/${bpRow.bp_diastolic ?? "—"}` : "—", "mmHg", bpRow?`as of ${bpRow.date}`:"")}
-      ${kpiCard("Heart Rate", hrRow?.hr ?? null, "bpm", hrRow?`as of ${hrRow.date}`:"")}
-      ${kpiCard("Steps", stRow?.steps ?? null, "steps", stRow?`as of ${stRow.date}`:"")}
-    </section>`;
-
-  const menu = `
-    <section class="card mt-12">
-      <h3>Menu</h3>
-      <div class="menu-grid mt-12">
-        <a href="trends.html">Trends</a>
-        <a href="alerts.html">Alerts</a>
-        <a href="profile.html">Profile</a>
-        <a href="log-symptom.html">Log Symptom</a>
-      </div>
-    </section>`;
-
-  document.getElementById(rootId).innerHTML = kpis + menu;
+function latestReading(rows) {
+  const sorted = [...rows].sort((a, b) => a.date.localeCompare(b.date));
+  return sorted[sorted.length - 1];
 }
 
-async function renderProviderDashboard(user){
-  const today = todayStr();
-  const patientIds = await getAssignments(user.id);
-
-  let rowsHtml = "";
-  for (const pid of patientIds){
-    const todays = await getReadingsByDate(pid, today);
-    let r = todays[0];
-    if (!r){
-      const all = await getReadings(pid);
-      r = latestNonNull(all, ["bp_systolic","bp_diastolic","hr","steps"]) || {};
+function renderPatientDashboard(user) {
+  (async () => {
+    const root = document.getElementById("app");
+    const rows = await getReadings(user.id);
+    if (!rows.length) {
+      root.innerHTML = `
+        <section class="card">
+          <h2>Welcome, ${user.name}</h2>
+          <p class="muted">No readings found. For demo, click the button to generate sample readings.</p>
+          <button id="seedBtn" class="btn-primary mt-12">Generate sample readings</button>
+        </section>
+      `;
+      document.getElementById("seedBtn").onclick = async () => {
+        const { seedDemoReadings } = await import("./api.js");
+        seedDemoReadings(user.id);
+        location.reload();
+      };
+      return;
     }
-    rowsHtml += `
-      <tr>
-        <td>${pid}</td>
-        <td>${r.bp_systolic!=null && r.bp_diastolic!=null ? `${r.bp_systolic}/${r.bp_diastolic}` : "—"}</td>
-        <td>${r.hr ?? "—"}</td>
-        <td>${r.steps ?? "—"}</td>
-        <td>${r.date ?? "—"}</td>
-        <td><a class="link" href="patient-detail.html?pid=${encodeURIComponent(pid)}">View</a></td>
-      </tr>`;
-  }
 
-  document.getElementById(rootId).innerHTML = `
-    <section class="card">
-      <div class="row between">
-        <h2>Patient Updates</h2>
-        <a class="btn-ghost" href="dashboard.html">Home</a>
-      </div>
-      <div style="overflow:auto">
-        <table style="width:100%;border-collapse:collapse">
-          <thead><tr>
-            <th align="left">Patient ID</th>
-            <th align="left">BP (S/D)</th>
-            <th align="left">Heart Rate</th>
-            <th align="left">Steps</th>
-            <th align="left">Reading Date</th>
-            <th align="left">Details</th>
-          </tr></thead>
-          <tbody>${rowsHtml || `<tr><td colspan="6">No patients or no readings.</td></tr>`}</tbody>
-        </table>
-      </div>
-    </section>`;
+    const today = todayStr();
+    const todayRow =
+      rows.find(r => r.date === today) || latestReading(rows) || {};
+
+    const kpis = `
+      <section class="card">
+        <h2>Today's Health Summary</h2>
+        <div class="grid-kpi mt-12">
+          <div class="kpi">
+            <div class="kpi-title">Blood Pressure</div>
+            <div class="kpi-value">
+              ${
+                todayRow.bp_systolic
+                  ? `${todayRow.bp_systolic}/${todayRow.bp_diastolic} mmHg`
+                  : "—"
+              }
+            </div>
+          </div>
+          <div class="kpi">
+            <div class="kpi-title">Heart Rate</div>
+            <div class="kpi-value">${
+              todayRow.hr ? todayRow.hr + " bpm" : "—"
+            }</div>
+          </div>
+          <div class="kpi">
+            <div class="kpi-title">Steps</div>
+            <div class="kpi-value">${
+              todayRow.steps ? todayRow.steps : "—"
+            }</div>
+          </div>
+        </div>
+      </section>
+    `;
+
+    const menu = `
+      <section class="card mt-16">
+        <h3>Quick Actions</h3>
+        <div class="menu-grid">
+          <a class="menu-item" href="trends.html">Trends</a>
+          <a class="menu-item" href="alerts.html">Alerts</a>
+          <a class="menu-item" href="profile.html">Profile</a>
+          <a class="menu-item" href="log-symptom.html">Log Symptom</a>
+        </div>
+      </section>
+    `;
+
+    root.innerHTML = kpis + menu;
+  })();
 }
 
-async function renderDashboard(){
-  const u = currentUser();
-  if (!u) return;
-  if (u.role === "patient") await renderPatientDashboard(u);
-  else await renderProviderDashboard(u);
+function renderProviderDashboard(user) {
+  (async () => {
+    const root = document.getElementById("app");
+    const patientIds = await getAssignedPatients(user.id);
+
+    let rowsHtml = "";
+
+    for (const pid of patientIds) {
+      const readings = await getReadings(pid);
+      if (!readings.length) continue;
+      const latest = latestReading(readings);
+      rowsHtml += `
+        <tr>
+          <td>${pid}</td>
+          <td>${
+            latest.bp_systolic
+              ? `${latest.bp_systolic}/${latest.bp_diastolic}`
+              : "—"
+          }</td>
+          <td>${latest.hr ?? "—"}</td>
+          <td>${latest.steps ?? "—"}</td>
+          <td>${latest.date}</td>
+          <td><a href="patient-detail.html?pid=${encodeURIComponent(
+            pid
+          )}">View</a></td>
+        </tr>
+      `;
+    }
+
+    if (!rowsHtml) {
+      rowsHtml = `<tr><td colspan="6">No patients or no readings.</td></tr>`;
+    }
+
+    root.innerHTML = `
+      <section class="card">
+        <div class="row between">
+          <h2>Patient Updates</h2>
+          <a class="btn-ghost" href="dashboard.html">Home</a>
+        </div>
+        <div class="table-wrap mt-12">
+          <table>
+            <thead>
+              <tr>
+                <th>Patient ID</th>
+                <th>BP (S/D)</th>
+                <th>Heart Rate</th>
+                <th>Steps</th>
+                <th>Date</th>
+                <th>Details</th>
+              </tr>
+            </thead>
+            <tbody>${rowsHtml}</tbody>
+          </table>
+        </div>
+      </section>
+    `;
+  })();
 }
 
-if (location.pathname.endsWith("dashboard.html")) renderDashboard();
-
-
+export function initDashboard() {
+  const user = currentUser();
+  if (!user) return;
+  if (user.role === "patient") renderPatientDashboard(user);
+  else renderProviderDashboard(user);
+}
