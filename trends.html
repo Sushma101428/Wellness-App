@@ -1,67 +1,67 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta charset="UTF-8" />
   <title>RPM Prototype – Trends</title>
   <link rel="stylesheet" href="./styles.css" />
 </head>
+
 <body>
-  <header class="app-header">
-    <div class="header-left">
-      <img src="./logo.png" alt="App logo" class="logo" />
-      <strong>RPM Prototype</strong>
+<header class="app-header">
+  <div class="header-left">
+    <img src="./logo.png" alt="App logo" class="logo" />
+    <strong>RPM Prototype</strong>
+  </div>
+
+  <nav class="header-nav">
+    <a id="homeLink" href="dashboard.html">Home</a>
+    <a id="trendsLink" class="active" href="#">Trends</a>
+    <a id="alertsLink" href="alerts.html">Alerts</a>
+    <a id="profileLink" href="profile.html">Profile</a>
+    <button id="logoutBtn" class="btn-ghost">Log out</button>
+  </nav>
+</header>
+
+<main class="container">
+  <section class="card">
+    <div class="row between">
+      <h2>Trends</h2>
+      <a id="homeSmall" class="btn" href="dashboard.html">Home</a>
     </div>
-    <nav class="header-nav">
-      <a href="dashboard.html">Home</a>
-      <a id="trendsLink" class="active" href="#">Trends</a>
-      <a href="alerts.html">Alerts</a>
-      <a href="profile.html">Profile</a>
-      <button id="logoutBtn" class="btn-ghost">Log out</button>
-    </nav>
-  </header>
 
-  <main class="container">
-    <section class="card">
-      <div class="row between">
-        <h2>Trends</h2>
-        <a class="btn-ghost" href="dashboard.html">Home</a>
-      </div>
-      <div class="segmented">
-        <button data-metric="bp" class="on">Blood Pressure</button>
-        <button data-metric="hr">Heart Rate</button>
-        <button data-metric="glucose">Glucose</button>
-        <button data-metric="steps">Steps</button>
-      </div>
-      <div class="chart-wrap">
-        <canvas id="trendChart" width="880" height="420" aria-label="Trend chart" role="img"></canvas>
-      </div>
-    </section>
-  </main>
+    <div class="trend-buttons">
+      <button class="trend-btn active" data-type="bp">Blood Pressure</button>
+      <button class="trend-btn" data-type="hr">Heart Rate</button>
+      <button class="trend-btn" data-type="glucose">Glucose</button>
+      <button class="trend-btn" data-type="steps">Steps</button>
+    </div>
 
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <script type="module" src="./charts.js"></script>
-  <script type="module" src="./router.js"></script>
-  <script>
-  // Handle Trends link dynamically
-  const params = new URLSearchParams(window.location.search);
+    <div id="chartArea" class="chart-area">
+      Loading…
+    </div>
+  </section>
+</main>
+
+<script type="module" src="./charts.js"></script>
+
+<!-- Dynamic Navigation Fix -->
+<script>
+  const params = new URLSearchParams(location.search);
   const pid = params.get("pid");
 
+  // Fix Trends link
   const trendsLink = document.getElementById("trendsLink");
+  trendsLink.href = pid ? `trends.html?pid=${pid}` : "trends.html";
 
-  if (pid) {
-    // Provider is viewing a patient
-    trendsLink.href = `trends.html?pid=${pid}`;
-  } else {
-    // Patient is viewing self
-    trendsLink.href = "trends.html";
-  }
+  // Fix Home link for providers
+  const homeLink = document.getElementById("homeLink");
+  homeLink.href = "dashboard.html";
+
+  // Alerts & Profile (they do not use pid)
+  document.getElementById("alertsLink").href = "alerts.html";
+  document.getElementById("profileLink").href = "profile.html";
 </script>
+
+<script src="./auth.js"></script>
 </body>
 </html>
-
-  
-
-
-
-
