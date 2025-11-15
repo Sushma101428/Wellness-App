@@ -14,7 +14,7 @@
     </div>
     <nav class="header-nav">
       <a href="dashboard.html">Home</a>
-      <a class="active" href="trends.html">Trends</a>
+      <a id="trendsLink" class="active" href="#">Trends</a>
       <a href="alerts.html">Alerts</a>
       <a href="profile.html">Profile</a>
       <button id="logoutBtn" class="btn-ghost">Log out</button>
@@ -42,8 +42,26 @@
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script type="module" src="./charts.js"></script>
   <script type="module" src="./router.js"></script>
+  <script>
+  // Handle Trends link dynamically
+  const params = new URLSearchParams(window.location.search);
+  const pid = params.get("pid");
+
+  const trendsLink = document.getElementById("trendsLink");
+
+  if (pid) {
+    // Provider is viewing a patient
+    trendsLink.href = `trends.html?pid=${pid}`;
+  } else {
+    // Patient is viewing self
+    trendsLink.href = "trends.html";
+  }
+</script>
 </body>
 </html>
+
+  
+
 
 
 
