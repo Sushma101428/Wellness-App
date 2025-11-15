@@ -1,68 +1,109 @@
+// charts.js
 import { currentUser } from "./auth.js";
-import { getReadingsById } from "./api.js";
+import { getReadings } from "./api.js";
 
-const params = new URLSearchParams(location.search);
-const pidURL = params.get("pid");
+let chart;
 
-const user = currentUser();
+function makeChart(ctx, metric, readings) {
+  const labels = readings.map(r => r.date);
 
-// PATIENT → use own ID
-// PROVIDER → must have pid in URL
-let targetId = user.role === "patient" ? user.id : pidURL;
+  let datasets = [];
+  if (metric === "bp") {
+    datasets = [
+      {
+        label: "Systolic",
+        data: readings.map(r => r.bp_systolic),
+        borderColor: "rgb(37, 99, 235)",
+        fill: false
+      },
+      {
+        label: "Diastolic",
+        data: readings.map(r => r.bp_diastolic),
+        borderColor: "rgb(16, 185, 129)",
+        fill: false
+      }
+    ];
+  } else if (metric === "hr") {
+    datasets = [
+      {
+        label: "Heart Rate",
+        data: readings.map(r => r.hr),
+        borderColor: "rgb(239, 68, 68)",
+        fill: false
+      }
+    ];
+  } else if (metric === "glucose") {
+    datasets = [
+      {
+        label: "Glucose",
+        data: readings.map(r => r.glucose),
+        borderColor: "rgb(234, 179, 8)",
+        fill: false
+      }
+    ];
+  } else if (metric === "steps") {
+    datasets = [
+      {
+        label: "Steps",
+        data: readings.map(r => r.steps),
+        borderColor: "rgb(55, 65, 81)",
+        fill: false
+      }
+    ];
+  }
 
-// PROVIDER ERROR HANDLING
-if (user.role === "provider" && !pidURL) {
-  document.getElementById("chartArea").innerHTML =
-    "Please open trends from Dashboard → View.";
-  throw new Error("Provider missing patient ID");
+  chart = new Chart(ctx, {
+    type: "line",
+    data: { labels, datasets },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      interaction: { mode: "index", intersect: false },
+      plugins: { legend: { position: "top" } }
+    }
+  });
 }
 
-// LOAD READINGS
-let readings = await getReadingsById(targetId);
+async function initTrends() {
+  const user = currentUser();
+  if (!user) return;
 
-const chartArea = document.getElementById("chartArea");
+  const params = new URLSearchParams(location.search);
+  const pid = params.get("pid");
+  const targetId = user.role === "patient" ? user.id : pid;
 
-// NO DATA
-if (!readings || readings.length === 0) {
-  chartArea.innerHTML = "No readings available.";
-  return;
+  const chartArea = document.getElementById("chartArea");
+  if (user.role === "provider" && !pid) {
+    chartArea.textContent = "Open trends from Dashboard → View for a patient.";
+    return;
+  }
+
+  const readings = (await getReadings(targetId)).sort((a, b) =>
+    a.date.localeCompare(b.date)
+  );
+
+  if (!readings.length) {
+    chartArea.textContent = "No readings available.";
+    return;
+  }
+
+  chartArea.innerHTML = `<div style="height:260px"><canvas id="trendCanvas"></canvas></div>`;
+  const ctx = document.getElementById("trendCanvas").getContext("2d");
+
+  let currentMetric = "bp";
+  makeChart(ctx, currentMetric, readings);
+
+  document.querySelectorAll(".trend-btn").forEach(btn => {
+    btn.addEventListener("click", () => {
+      document
+        .querySelectorAll(".trend-btn")
+        .forEach(b => b.classList.remove("active"));
+      btn.classList.add("active");
+      currentMetric = btn.dataset.type;
+      chart.destroy();
+      makeChart(ctx, currentMetric, readings);
+    });
+  });
 }
 
-// RENDER CHARTS
-function render(type) {
-  if (type === "bp") {
-    chartArea.innerHTML = `
-      <h3>Blood Pressure</h3>
-      <p>${readings.map(r => `${r.sbp}/${r.dbp}`).join(", ")}</p>`;
-  }
-
-  if (type === "hr") {
-    chartArea.innerHTML = `
-      <h3>Heart Rate</h3>
-      <p>${readings.map(r => r.hr).join(", ")}</p>`;
-  }
-
-  if (type === "glucose") {
-    chartArea.innerHTML = `
-      <h3>Glucose</h3>
-      <p>${readings.map(r => r.glucose).join(", ")}</p>`;
-  }
-
-  if (type === "steps") {
-    chartArea.innerHTML = `
-      <h3>Steps</h3>
-      <p>${readings.map(r => r.steps).join(", ")}</p>`;
-  }
-}
-
-// INITIAL LOAD
-render("bp");
-
-// BUTTON SWITCHING
-document.querySelectorAll(".trend-btn").forEach(btn => {
-  btn.onclick = () => {
-    document.querySelector(".trend-btn.active")?.classList.remove("active");
-    btn.classList.add("active");
-    render(btn.dataset.type);
-  };
-});
+export { initTrends };
