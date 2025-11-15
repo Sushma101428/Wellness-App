@@ -1,8 +1,12 @@
+// router.js
 import { requireAuth, logout } from "./auth.js";
+
 document.addEventListener("DOMContentLoaded", () => {
   requireAuth();
-  document.getElementById("logoutBtn")?.addEventListener("click", logout);
+  const btn = document.getElementById("logoutBtn");
+  if (btn) btn.addEventListener("click", logout);
 });
+
 
 
 
