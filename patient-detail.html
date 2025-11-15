@@ -81,8 +81,16 @@
       }
     })();
   </script>
+  <script>
+  const params = new URLSearchParams(window.location.search);
+  const pid = params.get("pid");
+
+  document.querySelector('a[href="trends.html"]').href = `trends.html?pid=${pid}`;
+</script>
+
 </body>
 </html>
+
 
 
 
