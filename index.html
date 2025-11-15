@@ -1,51 +1,65 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta charset="UTF-8" />
   <title>RPM Prototype – Login</title>
   <link rel="stylesheet" href="./styles.css" />
 </head>
 <body class="auth-body">
   <main class="auth-card">
-    <img src="./logo.png" alt="App logo" class="logo-large" />
-    <h1>Sign in</h1>
+    <img src="./logo.png" class="logo-large" alt="App logo" />
+    <h1 class="text-center">Sign in</h1>
 
-    <form id="loginForm" aria-label="Login">
-      <label>Role
-        <select name="role" id="roleSel" aria-label="Role">
+    <form id="loginForm" class="mt-12">
+      <label>
+        Role
+        <select name="role" id="roleSel">
           <option value="patient">Patient</option>
           <option value="provider">Provider</option>
         </select>
       </label>
 
-      <div id="patientFields">
-        <label>Patient ID
-          <input name="patient_id" placeholder="e.g., 1001" autocomplete="username" required />
+      <div id="patientFields" class="mt-8">
+        <label>
+          Patient ID
+          <input name="patient_id" placeholder="e.g., 1001" required />
         </label>
-        <label>Password
-          <input name="patient_password" type="password" placeholder="Your password" required />
+        <label class="mt-8">
+          Password
+          <input
+            name="patient_pwd"
+            type="password"
+            placeholder="Your password"
+            required
+          />
         </label>
       </div>
 
-      <div id="providerFields" style="display:none">
-        <label>Provider ID
+      <div id="providerFields" class="mt-8" style="display:none">
+        <label>
+          Provider ID
           <input name="provider_id" placeholder="e.g., P9001" />
         </label>
-        <label>Password
-          <input name="provider_password" type="password" placeholder="Your password" />
+        <label class="mt-8">
+          Password
+          <input
+            name="provider_pwd"
+            type="password"
+            placeholder="Your password"
+          />
         </label>
       </div>
 
-      <button type="submit" class="btn-primary">Sign in</button>
+      <button type="submit" class="btn-primary mt-12" style="width:100%">
+        Sign in
+      </button>
     </form>
 
-    <p id="createLinks" class="muted small center mt-12">
+    <p id="newAccountRow" class="text-center mt-12 muted" style="font-size:0.9rem">
       New Patient? <a href="create-account.html">Create account</a>
     </p>
 
-    <!-- appears after 3 failed attempts -->
-    <p id="forgotRow" class="small center" style="display:none;margin-top:8px">
+    <p id="forgotRow" class="text-center mt-8 muted" style="font-size:0.85rem; display:none">
       <span class="link" id="forgotLink">Forgot password?</span>
     </p>
   </main>
@@ -56,7 +70,7 @@
       <h3>Invalid password</h3>
       <p>Please check your ID and password and try again.</p>
       <div class="modal-actions">
-        <button class="btn-primary" id="invalidOk">OK</button>
+        <button id="invalidOk" class="btn-primary">OK</button>
       </div>
     </div>
   </div>
@@ -66,107 +80,116 @@
     <div class="modal">
       <h3>Reset Password</h3>
       <p>Enter your account email. We’ll send a reset link (demo).</p>
-      <label>Email
+      <label class="mt-8">
+        Email
         <input id="fpEmail" type="email" placeholder="you@example.com" />
       </label>
       <div class="modal-actions">
-        <button class="btn-ghost" id="fpCancel">Cancel</button>
-        <button class="btn-primary" id="fpSend">Send Link</button>
+        <button id="fpCancel" class="btn-ghost">Cancel</button>
+        <button id="fpSend" class="btn-primary">Send Link</button>
       </div>
     </div>
   </div>
 
   <script type="module">
     import { login } from "./auth.js";
-    import { validatePatient, validateProvider } from "./api.js";
+    import { getPatient, getProvider } from "./api.js";
 
     const roleSel = document.getElementById("roleSel");
-    const patientBox = document.getElementById("patientFields");
-    const providerBox = document.getElementById("providerFields");
-    const links = document.getElementById("createLinks");
+    const patientFields = document.getElementById("patientFields");
+    const providerFields = document.getElementById("providerFields");
+    const newRow = document.getElementById("newAccountRow");
     const forgotRow = document.getElementById("forgotRow");
     const forgotLink = document.getElementById("forgotLink");
 
-    // modals
     const invalidModal = document.getElementById("invalidModal");
     const invalidOk = document.getElementById("invalidOk");
     const forgotModal = document.getElementById("forgotModal");
+    const fpEmail = document.getElementById("fpEmail");
     const fpCancel = document.getElementById("fpCancel");
     const fpSend = document.getElementById("fpSend");
-    const fpEmail = document.getElementById("fpEmail");
 
-    function openModal(el){ el.style.display="flex"; }
-    function closeModal(el){ el.style.display="none"; }
+    function openModal(el) { el.style.display = "flex"; }
+    function closeModal(el) { el.style.display = "none"; }
 
-    function attemptsKey(role){
-      return role === "patient" ? "login_attempts_patient" : "login_attempts_provider";
+    function attemptsKey(role) {
+      return role === "patient" ? "attempts_patient" : "attempts_provider";
     }
-    function getAttempts(role){
-      try{ return Number(localStorage.getItem(attemptsKey(role))||"0"); }catch{ return 0; }
+
+    function getAttempts(role) {
+      return Number(localStorage.getItem(attemptsKey(role)) || "0");
     }
-    function incAttempts(role){
-      const n = getAttempts(role)+1;
+
+    function incAttempts(role) {
+      const n = getAttempts(role) + 1;
       localStorage.setItem(attemptsKey(role), String(n));
-      if (n>=3) forgotRow.style.display="block";
+      if (n >= 3) forgotRow.style.display = "block";
     }
-    function resetAttempts(role){
+
+    function resetAttempts(role) {
       localStorage.removeItem(attemptsKey(role));
-      forgotRow.style.display="none";
+      forgotRow.style.display = "none";
     }
 
-    function toggleRoleUI() {
-      const patient = roleSel.value === "patient";
-      patientBox.style.display  = patient ? "block" : "none";
-      providerBox.style.display = patient ? "none" : "block";
-      patientBox.querySelectorAll("input").forEach(i => i.required = patient);
-      providerBox.querySelectorAll("input").forEach(i => i.required = !patient);
-      links.innerHTML = patient
-        ? 'New Patient? <a href="create-account.html">Create account</a>'
-        : 'New Provider? <a href="create-provider.html">Create provider</a>';
-
-      // restore attempts state
-      const n = getAttempts(patient ? "patient":"provider");
-      forgotRow.style.display = n>=3 ? "block" : "none";
+    function updateRoleUI() {
+      const role = roleSel.value;
+      if (role === "patient") {
+        patientFields.style.display = "block";
+        providerFields.style.display = "none";
+        newRow.innerHTML = 'New Patient? <a href="create-account.html">Create account</a>';
+      } else {
+        patientFields.style.display = "none";
+        providerFields.style.display = "block";
+        newRow.innerHTML = 'New Provider? <a href="create-provider.html">Create provider</a>';
+      }
+      const n = getAttempts(role);
+      forgotRow.style.display = n >= 3 ? "block" : "none";
     }
-    roleSel.addEventListener("change", toggleRoleUI); toggleRoleUI();
+    roleSel.addEventListener("change", updateRoleUI);
+    updateRoleUI();
 
-    document.getElementById("loginForm").addEventListener("submit", async (e) => {
+    document.getElementById("loginForm").addEventListener("submit", async e => {
       e.preventDefault();
-      const fd = new FormData(e.target);
-      const role = fd.get("role");
+      const role = roleSel.value;
 
       if (role === "patient") {
-        const id = fd.get("patient_id").trim();
-        const pw = fd.get("patient_password");
-        const u = await validatePatient(id, pw);
-        if (!u) { incAttempts("patient"); openModal(invalidModal); return; }
+        const id = e.target.patient_id.value.trim();
+        const pw = e.target.patient_pwd.value;
+        const p = await getPatient(id);
+        if (!p || String(p.password) !== String(pw)) {
+          incAttempts("patient");
+          openModal(invalidModal);
+          return;
+        }
         resetAttempts("patient");
-        login({ role: "patient", id, name: u.name });
+        login({ id, role: "patient", name: p.name });
       } else {
-        const id = fd.get("provider_id").trim();
-        const pw = fd.get("provider_password");
-        const u = await validateProvider(id, pw);
-        if (!u) { incAttempts("provider"); openModal(invalidModal); return; }
+        const id = e.target.provider_id.value.trim();
+        const pw = e.target.provider_pwd.value;
+        const pr = await getProvider(id);
+        if (!pr || String(pr.password) !== String(pw)) {
+          incAttempts("provider");
+          openModal(invalidModal);
+          return;
+        }
         resetAttempts("provider");
-        login({ role: "provider", id, name: u.name });
+        login({ id, role: "provider", name: pr.name });
       }
+
       location.href = "dashboard.html";
     });
 
-    invalidOk.addEventListener("click", ()=> closeModal(invalidModal));
-
-    // forgot password flow
-    forgotLink.addEventListener("click", ()=> openModal(forgotModal));
-    fpCancel.addEventListener("click", ()=> closeModal(forgotModal));
-    fpSend.addEventListener("click", ()=>{
-      const email = fpEmail.value.trim();
-      if(!email) return alert("Please enter your email");
+    invalidOk.onclick = () => closeModal(invalidModal);
+    forgotLink.onclick = () => openModal(forgotModal);
+    fpCancel.onclick = () => closeModal(forgotModal);
+    fpSend.onclick = () => {
+      if (!fpEmail.value.trim()) {
+        alert("Please enter your email.");
+        return;
+      }
       closeModal(forgotModal);
-      alert(`If an account exists for ${email}, a reset link has been sent (demo).`);
-    });
+      alert("If an account exists, a reset link has been sent (demo).");
+    };
   </script>
 </body>
 </html>
-
-
-
