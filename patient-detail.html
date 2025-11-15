@@ -1,96 +1,75 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Patient Detail – RPM</title>
+  <meta charset="UTF-8" />
+  <title>Patient Details</title>
   <link rel="stylesheet" href="./styles.css" />
 </head>
+
 <body>
-  <header class="app-header">
-    <div class="header-left">
-      <img src="./logo.png" alt="App logo" class="logo" />
-      <strong>RPM Prototype</strong>
-    </div>
-    <nav class="header-nav">
-      <a href="dashboard.html">Home</a>
-      <a href="alerts.html">Alerts</a>
-      <a href="profile.html">Profile</a>
-      <button id="logoutBtn" class="btn-ghost">Log out</button>
-    </nav>
-  </header>
+<header class="app-header">
+  <div class="header-left">
+    <img src="./logo.png" class="logo" />
+    <strong>RPM Prototype</strong>
+  </div>
 
-  <main class="container">
-    <section class="card">
-      <div class="row between">
-        <h2 id="title">Patient Detail</h2>
-        <a class="btn-ghost" href="dashboard.html">Back</a>
-      </div>
+  <nav class="header-nav">
+    <a href="dashboard.html">Home</a>
+    <a id="trendsLink" href="#">Trends</a>
+    <a href="alerts.html">Alerts</a>
+    <a href="profile.html">Profile</a>
+    <button id="logoutBtn" class="btn-ghost">Log out</button>
+  </nav>
+</header>
 
-      <!-- Trends -->
-      <h3>Trends</h3>
-      <div class="segmented">
-        <button data-metric="bp" class="on">Blood Pressure</button>
-        <button data-metric="hr">Heart Rate</button>
-        <button data-metric="glucose">Glucose</button>
-        <button data-metric="steps">Steps</button>
-      </div>
-      <div class="chart-wrap">
-        <canvas id="trendChart" width="880" height="420" aria-label="Trend chart" role="img"></canvas>
-      </div>
-    </section>
+<main class="container">
+  <section class="card">
+    <h2>Patient Details</h2>
 
-    <section class="card mt-12">
-      <h3>Symptom Logs</h3>
-      <div id="symptomList"></div>
-    </section>
-  </main>
+    <div id="patientInfo">Loading…</div>
 
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <script type="module" src="./router.js"></script>
-  <script type="module" src="./charts.js"></script>
-  <script type="module">
-    import { getSymptoms, fetchJSON } from "./api.js";
+    <h3>Readings</h3>
+    <div id="readingList">Loading…</div>
 
-    function getPid(){
-      const url = new URL(location.href);
-      return url.searchParams.get("pid");
-    }
+    <a id="backBtn" class="btn" href="dashboard.html">Back</a>
+  </section>
+</main>
 
-    (async function init(){
-      const pid = getPid();
-      document.getElementById("title").textContent = `Patient Detail – ${pid}`;
+<script type="module">
+  import { getPatientById, getReadingsById } from "./api.js";
 
-      // symptom logs
-      const logs = getSymptoms(pid);
-      const root = document.getElementById("symptomList");
-      if (!logs.length){
-        root.innerHTML = `<p class="muted">No symptom logs.</p>`;
-      } else {
-        root.innerHTML = `
-          <ul class="list">
-            ${logs.map(l=>`
-              <li class="list-item">
-                <div>
-                  <strong>${l.type || "Symptom"}</strong>
-                  <div class="small muted">${l.severity ? `Severity: ${l.severity}` : ""}</div>
-                  ${l.notes ? `<div>${l.notes}</div>` : ""}
-                </div>
-              </li>`).join("")}
-          </ul>`;
-      }
-    })();
-  </script>
-  <script>
-  const params = new URLSearchParams(window.location.search);
+  const params = new URLSearchParams(location.search);
   const pid = params.get("pid");
 
-  document.querySelector('a[href="trends.html"]').href = `trends.html?pid=${pid}`;
+  // Redirect if no pid
+  if (!pid) location.href = "dashboard.html";
+
+  // Trends link correctly passes pid
+  document.getElementById("trendsLink").href = `trends.html?pid=${pid}`;
+
+  // Load patient info
+  const patient = await getPatientById(pid);
+  const readings = await getReadingsById(pid);
+
+  document.getElementById("patientInfo").innerHTML = `
+    <p><strong>ID:</strong> ${patient.id}</p>
+    <p><strong>Name:</strong> ${patient.fname} ${patient.lname}</p>
+    <p><strong>Email:</strong> ${patient.email}</p>
+  `;
+
+  document.getElementById("readingList").innerHTML = readings
+    .map(r => `
+      <div class="reading-item">
+        <p><strong>Date:</strong> ${r.date}</p>
+        <p><strong>BP:</strong> ${r.sbp}/${r.dbp}</p>
+        <p><strong>HR:</strong> ${r.hr}</p>
+        <p><strong>Glucose:</strong> ${r.glucose}</p>
+        <p><strong>Steps:</strong> ${r.steps}</p>
+      </div>
+    `)
+    .join("");
 </script>
 
+<script src="./auth.js"></script>
 </body>
 </html>
-
-
-
-
