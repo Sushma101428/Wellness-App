@@ -71,5 +71,13 @@
 </script>
 
 <script src="./auth.js"></script>
+  <script>
+  const params = new URLSearchParams(location.search);
+  const pid = params.get("pid");
+
+  document.getElementById("trendsLink").href = `trends.html?pid=${pid}`;
+</script>
+
 </body>
 </html>
+
