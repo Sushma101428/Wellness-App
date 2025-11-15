@@ -1,83 +1,68 @@
-// charts.js
 import { currentUser } from "./auth.js";
 import { getReadingsById } from "./api.js";
 
 const params = new URLSearchParams(location.search);
-const pidFromUrl = params.get("pid");
+const pidURL = params.get("pid");
 
 const user = currentUser();
-let targetId = user.role === "patient" ? user.id : pidFromUrl;
 
-// Provider opened trends without selecting a patient
-if (user.role === "provider" && !pidFromUrl) {
+// PATIENT → use own ID
+// PROVIDER → must have pid in URL
+let targetId = user.role === "patient" ? user.id : pidURL;
+
+// PROVIDER ERROR HANDLING
+if (user.role === "provider" && !pidURL) {
   document.getElementById("chartArea").innerHTML =
-    "Select a patient from Dashboard → View → Trends.";
-  throw new Error("No patient ID provided for provider");
+    "Please open trends from Dashboard → View.";
+  throw new Error("Provider missing patient ID");
 }
 
-// Load data
+// LOAD READINGS
 let readings = await getReadingsById(targetId);
 
-// UI element
 const chartArea = document.getElementById("chartArea");
 
-// If no readings
+// NO DATA
 if (!readings || readings.length === 0) {
   chartArea.innerHTML = "No readings available.";
+  return;
 }
 
-// Render chart
-function renderChart(type) {
-  if (!readings.length) {
-    chartArea.innerHTML = "No readings available.";
-    return;
-  }
-
+// RENDER CHARTS
+function render(type) {
   if (type === "bp") {
     chartArea.innerHTML = `
-      <h3>Blood Pressure Trends</h3>
-      <p>Systolic: ${readings.map(r => r.sbp).join(", ")}</p>
-      <p>Diastolic: ${readings.map(r => r.dbp).join(", ")}</p>
-    `;
+      <h3>Blood Pressure</h3>
+      <p>${readings.map(r => `${r.sbp}/${r.dbp}`).join(", ")}</p>`;
   }
 
   if (type === "hr") {
     chartArea.innerHTML = `
-      <h3>Heart Rate Trends</h3>
-      <p>${readings.map(r => r.hr).join(", ")}</p>
-    `;
+      <h3>Heart Rate</h3>
+      <p>${readings.map(r => r.hr).join(", ")}</p>`;
   }
 
   if (type === "glucose") {
     chartArea.innerHTML = `
-      <h3>Glucose Trends</h3>
-      <p>${readings.map(r => r.glucose).join(", ")}</p>
-    `;
+      <h3>Glucose</h3>
+      <p>${readings.map(r => r.glucose).join(", ")}</p>`;
   }
 
   if (type === "steps") {
     chartArea.innerHTML = `
-      <h3>Steps Trends</h3>
-      <p>${readings.map(r => r.steps).join(", ")}</p>
-    `;
+      <h3>Steps</h3>
+      <p>${readings.map(r => r.steps).join(", ")}</p>`;
   }
 }
 
-// Default chart
-renderChart("bp");
+// INITIAL LOAD
+render("bp");
 
-// Handle button clicks
+// BUTTON SWITCHING
 document.querySelectorAll(".trend-btn").forEach(btn => {
   btn.onclick = () => {
     document.querySelector(".trend-btn.active")?.classList.remove("active");
     btn.classList.add("active");
-    renderChart(btn.dataset.type);
+    render(btn.dataset.type);
   };
 });
-
-
-
-
-
-
-
