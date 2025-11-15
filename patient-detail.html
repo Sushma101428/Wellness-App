@@ -2,17 +2,15 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Patient Details</title>
+  <title>Patient Detail – RPM</title>
   <link rel="stylesheet" href="./styles.css" />
 </head>
-
 <body>
 <header class="app-header">
   <div class="header-left">
-    <img src="./logo.png" class="logo" />
+    <img src="./logo.png" class="logo" alt="App logo" />
     <strong>RPM Prototype</strong>
   </div>
-
   <nav class="header-nav">
     <a href="dashboard.html">Home</a>
     <a id="trendsLink" href="#">Trends</a>
@@ -24,60 +22,72 @@
 
 <main class="container">
   <section class="card">
-    <h2>Patient Details</h2>
+    <div class="row between">
+      <h2 id="title">Patient Detail</h2>
+      <a class="btn-ghost" href="dashboard.html">Back</a>
+    </div>
 
-    <div id="patientInfo">Loading…</div>
+    <div id="summary" class="mt-12"></div>
 
-    <h3>Readings</h3>
-    <div id="readingList">Loading…</div>
-
-    <a id="backBtn" class="btn" href="dashboard.html">Back</a>
+    <h3 class="mt-16">Symptom Logs</h3>
+    <div id="symptoms" class="mt-8"></div>
   </section>
 </main>
 
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script type="module">
-  import { getPatientById, getReadingsById } from "./api.js";
+  import "./router.js";
+  import { getPatient, getReadings, getSymptoms } from "./api.js";
 
   const params = new URLSearchParams(location.search);
   const pid = params.get("pid");
-
-  // Redirect if no pid
   if (!pid) location.href = "dashboard.html";
 
-  // Trends link correctly passes pid
   document.getElementById("trendsLink").href = `trends.html?pid=${pid}`;
 
-  // Load patient info
-  const patient = await getPatientById(pid);
-  const readings = await getReadingsById(pid);
+  async function init() {
+    const p = await getPatient(pid);
+    const readings = await getReadings(pid);
+    const summaryDiv = document.getElementById("summary");
+    document.getElementById("title").textContent = `Patient Detail – ${pid}`;
 
-  document.getElementById("patientInfo").innerHTML = `
-    <p><strong>ID:</strong> ${patient.id}</p>
-    <p><strong>Name:</strong> ${patient.fname} ${patient.lname}</p>
-    <p><strong>Email:</strong> ${patient.email}</p>
-  `;
+    if (!readings.length) {
+      summaryDiv.innerHTML = `<p class="muted">No readings found.</p>`;
+    } else {
+      const last = readings.sort((a,b)=>a.date.localeCompare(b.date)).slice(-1)[0];
+      summaryDiv.innerHTML = `
+        <p><strong>Name:</strong> ${p?.name || "—"}</p>
+        <p><strong>Last Reading:</strong> ${last.date}</p>
+        <p><strong>BP:</strong> ${last.bp_systolic}/${last.bp_diastolic}</p>
+        <p><strong>HR:</strong> ${last.hr}</p>
+        <p><strong>Steps:</strong> ${last.steps}</p>
+      `;
+    }
 
-  document.getElementById("readingList").innerHTML = readings
-    .map(r => `
-      <div class="reading-item">
-        <p><strong>Date:</strong> ${r.date}</p>
-        <p><strong>BP:</strong> ${r.sbp}/${r.dbp}</p>
-        <p><strong>HR:</strong> ${r.hr}</p>
-        <p><strong>Glucose:</strong> ${r.glucose}</p>
-        <p><strong>Steps:</strong> ${r.steps}</p>
-      </div>
-    `)
-    .join("");
+    const logs = getSymptoms(pid);
+    const symDiv = document.getElementById("symptoms");
+    if (!logs.length) {
+      symDiv.innerHTML = `<p class="muted">No symptom logs yet.</p>`;
+    } else {
+      symDiv.innerHTML = `
+        <ul class="list">
+          ${logs
+            .map(
+              l => `<li class="list-item">
+                <div><strong>${l.type}</strong> (${l.severity})</div>
+                <div class="muted" style="font-size:0.85rem">${new Date(
+                  l.timestamp
+                ).toLocaleString()}</div>
+                ${l.notes ? `<div>${l.notes}</div>` : ""}
+              </li>`
+            )
+            .join("")}
+        </ul>
+      `;
+    }
+  }
+
+  init();
 </script>
-
-<script src="./auth.js"></script>
-  <script>
-  const params = new URLSearchParams(location.search);
-  const pid = params.get("pid");
-
-  document.getElementById("trendsLink").href = `trends.html?pid=${pid}`;
-</script>
-
 </body>
 </html>
-
