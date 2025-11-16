@@ -1,128 +1,49 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-  <meta charset="UTF-8" />
-  <title>RPM Prototype – Alerts</title>
-  <link rel="stylesheet" href="./styles.css" />
+    <title>Alerts</title>
+    <link rel="stylesheet" href="styles.css">
 </head>
 
 <body>
-<header class="app-header">
-  <div class="header-left">
-    <img src="./logo.png" class="logo" alt="App logo" />
-    <strong>RPM Prototype</strong>
-  </div>
-
-  <nav class="header-nav">
-    <a href="dashboard.html">Home</a>
-    <a href="trends.html">Trends</a>
-    <a class="active" href="alerts.html">Alerts</a>
-    <a href="profile.html">Profile</a>
-    <button id="logoutBtn" class="btn-ghost">Log out</button>
-  </nav>
+<header>
+    <img src="logo.png" class="logo">
+    <h2>Alerts</h2>
 </header>
 
-<main class="container">
-  <section class="card">
-    <div class="row between">
-      <h2>Alerts</h2>
-      <a href="dashboard.html" class="btn-light">Home</a>
-    </div>
+<nav class="nav">
+    <a href="dashboard.html">Home</a>
+    <a href="alerts.html" class="active">Alerts</a>
+    <a href="trends.html">Trends</a>
+    <a href="log-symptom.html">Log Symptoms</a>
+    <a href="profile.html">Profile</a>
+    <a onclick="logout()">Logout</a>
+</nav>
 
-    <table class="table">
-      <thead>
-      <tr>
-        <th>Patient</th>
-        <th>Date</th>
-        <th>Type</th>
-        <th>Value</th>
-      </tr>
-      </thead>
-      <tbody id="alertsTable">
-      <tr><td colspan="4">Loading...</td></tr>
-      </tbody>
-    </table>
-  </section>
-</main>
+<section id="alerts" class="card"></section>
 
-<script type="module">
-  import { currentUser } from "./auth.js";
-  import { getReadingsById } from "./api.js";
+<script src="ui.js"></script>
+<script src="auth.js"></script>
+<script src="api.js"></script>
 
-  const table = document.getElementById("alertsTable");
+<script>
+(async () => {
+    const user = JSON.parse(localStorage.getItem("activeUser"));
+    const vitals = await getVitals(user.id);
 
-  // Logout (simple)
-  const logoutBtn = document.getElementById("logoutBtn");
-  if (logoutBtn) {
-    logoutBtn.addEventListener("click", () => {
-      localStorage.removeItem("currentUser");
-      window.location.href = "index.html";
-    });
-  }
+    let last = vitals[0];
+    let list = [];
 
-  const user = currentUser();
-  const params = new URLSearchParams(location.search);
+    if (last.bp_systolic > 130) list.push("High Systolic BP");
+    if (last.bp_diastolic > 80) list.push("High Diastolic BP");
+    if (last.hr > 100) list.push("High Heart Rate");
+    if (last.glucose > 130) list.push("High Glucose");
 
-  // Patient ID to show alerts for
-  const pid = user.role === "patient" ? user.id : params.get("pid");
+    if (list.length === 0) list.push("No alerts — all vitals are normal");
 
-  // Provider opened Alerts directly without selecting a patient
-  if (user.role === "provider" && !pid) {
-    table.innerHTML = `
-      <tr>
-        <td colspan="4" style="padding:20px; text-align:center;">
-          Select a patient from <strong>Dashboard → View → Alerts</strong>.
-        </td>
-      </tr>`;
-    throw new Error("Provider missing pid");
-  }
-
-  const readings = await getReadingsById(pid);
-
-  if (!readings || readings.length === 0) {
-    table.innerHTML = `
-      <tr>
-        <td colspan="4" style="padding:20px; text-align:center;">
-          No alerts — no vitals recorded for this patient.
-        </td>
-      </tr>`;
-    return;
-  }
-
-  function getAlerts(r) {
-    const rows = [];
-    if (r.bp_systolic > 140) rows.push(["Systolic BP", r.bp_systolic]);
-    if (r.bp_diastolic > 90) rows.push(["Diastolic BP", r.bp_diastolic]);
-    if (r.hr > 100) rows.push(["Heart Rate", r.hr]);
-    if (r.glucose > 180) rows.push(["Glucose", r.glucose]);
-    return rows;
-  }
-
-  let html = "";
-
-  readings.forEach((r) => {
-    const alerts = getAlerts(r);
-    alerts.forEach(([type, value]) => {
-      html += `
-        <tr>
-          <td>${pid}</td>
-          <td>${r.date}</td>
-          <td>${type}</td>
-          <td>${value}</td>
-        </tr>`;
-    });
-  });
-
-  if (html === "") {
-    table.innerHTML = `
-      <tr>
-        <td colspan="4" style="padding:20px; text-align:center;">
-          No alerts — all vitals are within limits.
-        </td>
-      </tr>`;
-  } else {
-    table.innerHTML = html;
-  }
+    show("alerts", list.map(a => `<p>${a}</p>`).join(""));
+})();
 </script>
+
 </body>
 </html>
