@@ -13,8 +13,8 @@
     "date": "2025-11-14",
     "bp_systolic": 141,
     "bp_diastolic": 92,
-    "hr": 86,
-    "glucose": 184,
+    "hr": 76,
+    "glucose": 114,
     "steps": 8123
   },
   {
@@ -36,3 +36,4 @@
     "steps": 6120
   }
 ]
+
