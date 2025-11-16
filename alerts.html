@@ -1,114 +1,141 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <title>RPM Prototype – Alerts</title>
-  <link rel="stylesheet" href="./styles.css" />
+    <meta charset="UTF-8" />
+    <title>RPM Prototype – Alerts</title>
+    <link rel="stylesheet" href="./styles.css" />
+    <script type="module" src="./alerts.js"></script>
 </head>
+
 <body>
+
 <header class="app-header">
-  <div class="header-left">
-    <img src="./logo.png" class="logo" alt="App logo" />
-    <strong>RPM Prototype</strong>
-  </div>
-  <nav class="header-nav">
-    <a href="dashboard.html">Home</a>
-    <a href="trends.html">Trends</a>
-    <a class="active" href="alerts.html">Alerts</a>
-    <a href="profile.html">Profile</a>
-    <button id="logoutBtn" class="btn-ghost">Log out</button>
-  </nav>
+    <div class="header-left">
+        <img src="./logo.png" class="logo" alt="App logo" />
+        <strong>RPM Prototype</strong>
+    </div>
+
+    <nav class="header-nav">
+        <a href="dashboard.html">Home</a>
+        <a href="trends.html">Trends</a>
+        <a class="active" href="alerts.html">Alerts</a>
+        <a href="profile.html">Profile</a>
+        <button id="logoutBtn" class="btn-ghost">Log out</button>
+    </nav>
 </header>
 
+
 <main class="container">
-  <section class="card">
-    <div class="row between">
-      <h2>Alerts</h2>
-      <a class="btn-ghost" href="dashboard.html">Home</a>
-    </div>
-    <div id="alertsRoot" class="mt-12"></div>
-  </section>
+    <section class="card">
+        <div class="row between">
+            <h2>Alerts</h2>
+            <a href="dashboard.html" class="btn-light">Home</a>
+        </div>
+
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Patient</th>
+                    <th>Date</th>
+                    <th>Type</th>
+                    <th>Value</th>
+                </tr>
+            </thead>
+            <tbody id="alertsTable">
+                <tr><td colspan="4">Loading...</td></tr>
+            </tbody>
+        </table>
+    </section>
 </main>
 
+
 <script type="module">
-  import "./router.js";
-  import { currentUser } from "./auth.js";
-  import { getReadings, getAssignedPatients } from "./api.js";
+import { currentUser } from "./auth.js";
+import { getReadingsById } from "./api.js";
 
-  const TH = { sys: 140, dia: 90, hr: 110, glu: 180 };
+const user = currentUser();
 
-  async function init() {
-    const user = currentUser();
-    if (!user) return;
+// PATIENT → own ID
+// PROVIDER → require patient selected OR show message
+const params = new URLSearchParams(location.search);
+const pidURL = params.get("pid");
 
-    const root = document.getElementById("alertsRoot");
+let pid = user.role === "patient" ? user.id : pidURL;
 
-    function buildAlerts(patientId, rows) {
-      const out = [];
-      for (const r of rows) {
-        if (r.bp_systolic >= TH.sys)
-          out.push({ patient: patientId, date: r.date, type: "Systolic BP", value: r.bp_systolic });
-        if (r.bp_diastolic >= TH.dia)
-          out.push({ patient: patientId, date: r.date, type: "Diastolic BP", value: r.bp_diastolic });
-        if (r.hr >= TH.hr)
-          out.push({ patient: patientId, date: r.date, type: "Heart Rate", value: r.hr });
-        if (r.glucose >= TH.glu)
-          out.push({ patient: patientId, date: r.date, type: "Glucose", value: r.glucose });
-      }
-      return out;
-    }
+const tableBody = document.getElementById("alertsTable");
 
-    let alerts = [];
+// If provider opened Alerts directly → show message
+if (user.role === "provider" && !pid) {
+    tableBody.innerHTML = `
+        <tr>
+            <td colspan="4" style="padding:20px; text-align:center;">
+                Please select a patient from Dashboard → View to see alerts.
+            </td>
+        </tr>`;
+    throw new Error("Provider missing PID");
+}
 
-    if (user.role === "patient") {
-      const rows = await getReadings(user.id);
-      alerts = buildAlerts(user.id, rows);
-    } else {
-      const ids = await getAssignedPatients(user.id);
-      for (const pid of ids) {
-        const rows = await getReadings(pid);
-        alerts.push(...buildAlerts(pid, rows));
-      }
-    }
+let readings = await getReadingsById(pid);
 
-    if (!alerts.length) {
-      root.innerHTML = `<p class="muted">No active alerts 🎉</p>`;
-      return;
-    }
+// If no readings exist for this patient
+if (!readings || readings.length === 0) {
+    tableBody.innerHTML = `
+        <tr>
+            <td colspan="4" style="padding:20px; text-align:center;">
+                No alerts — no vitals recorded for this patient.
+            </td>
+        </tr>`;
+    return;
+}
 
-    alerts.sort((a, b) =>
-      (b.date + b.patient).localeCompare(a.date + a.patient)
+// Function to determine alert conditions
+function isAlert(r) {
+    return (
+        r.sbp > 140 ||
+        r.dbp > 90 ||
+        r.hr > 100 ||
+        r.glucose > 180
     );
+}
 
-    root.innerHTML = `
-      <div class="table-wrap">
-        <table>
-          <thead>
-            <tr>
-              <th>Patient</th>
-              <th>Date</th>
-              <th>Type</th>
-              <th>Value</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${alerts
-              .map(
-                a => `<tr>
-                  <td>${a.patient}</td>
-                  <td>${a.date}</td>
-                  <td>${a.type}</td>
-                  <td>${a.value}</td>
-                </tr>`
-              )
-              .join("")}
-          </tbody>
-        </table>
-      </div>
-    `;
-  }
+let alerts = readings.filter(isAlert);
 
-  init();
+// If readings exist but no alerts triggered
+if (alerts.length === 0) {
+    tableBody.innerHTML = `
+        <tr>
+            <td colspan="4" style="padding:20px; text-align:center;">
+                No alerts — all vitals are normal.
+            </td>
+        </tr>`;
+    return;
+}
+
+// Helper to print one alert row
+function row(r, type, value) {
+    return `
+        <tr>
+            <td>${pid}</td>
+            <td>${r.date}</td>
+            <td>${type}</td>
+            <td>${value}</td>
+        </tr>`;
+}
+
+let html = "";
+
+// Loop through readings & generate individual alerts
+alerts.forEach(r => {
+    if (r.sbp > 140) html += row(r, "Systolic BP", r.sbp);
+    if (r.dbp > 90) html += row(r, "Diastolic BP", r.dbp);
+    if (r.hr > 100) html += row(r, "Heart Rate", r.hr);
+    if (r.glucose > 180) html += row(r, "Glucose", r.glucose);
+});
+
+tableBody.innerHTML = html;
+
 </script>
+
 </body>
 </html>
+
