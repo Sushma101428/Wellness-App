@@ -1,109 +1,98 @@
-// charts.js
 import { currentUser } from "./auth.js";
-import { getReadings } from "./api.js";
+import { getReadingsById } from "./api.js";
+
+const user = currentUser();
+const params = new URLSearchParams(location.search);
+const pid = user.role === "patient" ? user.id : params.get("pid");
+
+const noData = document.getElementById("noDataMsg");
+const canvas = document.getElementById("trendChart");
 
 let chart;
 
-function makeChart(ctx, metric, readings) {
-  const labels = readings.map(r => r.date);
+// If provider opened Trends directly without pid
+if (user.role === "provider" && !pid) {
+  noData.textContent = "Open trends from Dashboard → View for a patient.";
+  canvas.style.display = "none";
+} else {
+  loadTrends();
+}
 
-  let datasets = [];
-  if (metric === "bp") {
-    datasets = [
-      {
-        label: "Systolic",
-        data: readings.map(r => r.bp_systolic),
-        borderColor: "rgb(37, 99, 235)",
-        fill: false
+async function loadTrends() {
+  const readings = await getReadingsById(pid);
+
+  if (!readings || readings.length === 0) {
+    noData.textContent = "No readings available for this patient.";
+    canvas.style.display = "none";
+    return;
+  }
+
+  // sort by date
+  readings.sort((a, b) => a.date.localeCompare(b.date));
+
+  const labels = readings.map((r) => r.date);
+  const series = {
+    bp: readings.map((r) => r.bp_systolic),
+    hr: readings.map((r) => r.hr),
+    glu: readings.map((r) => r.glucose),
+    steps: readings.map((r) => r.steps)
+  };
+
+  noData.textContent = "";
+
+  const ctx = canvas.getContext("2d");
+
+  function render(metricKey, label) {
+    if (chart) chart.destroy();
+    chart = new Chart(ctx, {
+      type: "line",
+      data: {
+        labels,
+        datasets: [
+          {
+            label,
+            data: series[metricKey],
+            tension: 0.3
+          }
+        ]
       },
-      {
-        label: "Diastolic",
-        data: readings.map(r => r.bp_diastolic),
-        borderColor: "rgb(16, 185, 129)",
-        fill: false
+      options: {
+        responsive: true,
+        scales: {
+          x: { title: { display: true, text: "Date" } },
+          y: { beginAtZero: false }
+        }
       }
-    ];
-  } else if (metric === "hr") {
-    datasets = [
-      {
-        label: "Heart Rate",
-        data: readings.map(r => r.hr),
-        borderColor: "rgb(239, 68, 68)",
-        fill: false
-      }
-    ];
-  } else if (metric === "glucose") {
-    datasets = [
-      {
-        label: "Glucose",
-        data: readings.map(r => r.glucose),
-        borderColor: "rgb(234, 179, 8)",
-        fill: false
-      }
-    ];
-  } else if (metric === "steps") {
-    datasets = [
-      {
-        label: "Steps",
-        data: readings.map(r => r.steps),
-        borderColor: "rgb(55, 65, 81)",
-        fill: false
-      }
-    ];
-  }
-
-  chart = new Chart(ctx, {
-    type: "line",
-    data: { labels, datasets },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      interaction: { mode: "index", intersect: false },
-      plugins: { legend: { position: "top" } }
-    }
-  });
-}
-
-async function initTrends() {
-  const user = currentUser();
-  if (!user) return;
-
-  const params = new URLSearchParams(location.search);
-  const pid = params.get("pid");
-  const targetId = user.role === "patient" ? user.id : pid;
-
-  const chartArea = document.getElementById("chartArea");
-  if (user.role === "provider" && !pid) {
-    chartArea.textContent = "Open trends from Dashboard → View for a patient.";
-    return;
-  }
-
-  const readings = (await getReadings(targetId)).sort((a, b) =>
-    a.date.localeCompare(b.date)
-  );
-
-  if (!readings.length) {
-    chartArea.textContent = "No readings available.";
-    return;
-  }
-
-  chartArea.innerHTML = `<div style="height:260px"><canvas id="trendCanvas"></canvas></div>`;
-  const ctx = document.getElementById("trendCanvas").getContext("2d");
-
-  let currentMetric = "bp";
-  makeChart(ctx, currentMetric, readings);
-
-  document.querySelectorAll(".trend-btn").forEach(btn => {
-    btn.addEventListener("click", () => {
-      document
-        .querySelectorAll(".trend-btn")
-        .forEach(b => b.classList.remove("active"));
-      btn.classList.add("active");
-      currentMetric = btn.dataset.type;
-      chart.destroy();
-      makeChart(ctx, currentMetric, readings);
     });
-  });
+  }
+
+  // initial chart
+  render("bp", "Systolic BP");
+
+  // buttons
+  document.getElementById("btnBP").onclick = () => {
+    setActive("btnBP");
+    render("bp", "Systolic BP");
+  };
+  document.getElementById("btnHR").onclick = () => {
+    setActive("btnHR");
+    render("hr", "Heart Rate");
+  };
+  document.getElementById("btnGlucose").onclick = () => {
+    setActive("btnGlucose");
+    render("glu", "Glucose");
+  };
+  document.getElementById("btnSteps").onclick = () => {
+    setActive("btnSteps");
+    render("steps", "Steps");
+  };
 }
 
-export { initTrends };
+function setActive(id) {
+  ["btnBP", "btnHR", "btnGlucose", "btnSteps"].forEach((btnId) => {
+    const btn = document.getElementById(btnId);
+    if (!btn) return;
+    if (btnId === id) btn.classList.add("active");
+    else btn.classList.remove("active");
+  });
+}
