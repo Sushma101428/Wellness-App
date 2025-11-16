@@ -1,63 +1,46 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-  <meta charset="UTF-8" />
-  <title>Create Patient</title>
-  <link rel="stylesheet" href="./styles.css" />
+    <title>Create Patient Account</title>
+    <link rel="stylesheet" href="styles.css">
 </head>
-<body class="auth-body">
-  <main class="auth-card">
-    <img src="./logo.png" class="logo-large" alt="App logo" />
-    <h1 class="text-center">Create Patient Account</h1>
 
-    <form id="createForm" class="mt-12">
-      <label>Patient ID
-        <input name="patient_id" required />
-      </label>
-      <label class="mt-8">Name
-        <input name="name" required />
-      </label>
-      <label class="mt-8">Email
-        <input name="email" type="email" />
-      </label>
-      <label class="mt-8">Password
-        <input name="password" type="password" required />
-      </label>
-      <label class="mt-8">Confirm Password
-        <input name="confirm" type="password" required />
-      </label>
-      <button class="btn-primary mt-12" type="submit" style="width:100%">Create</button>
-    </form>
+<body>
 
-    <p class="text-center mt-12 muted" style="font-size:0.9rem">
-      Already have an account? <a href="index.html">Sign in</a>
-    </p>
-  </main>
+<header>
+    <img src="logo.png" class="logo">
+    <h2>Create Patient Account</h2>
+</header>
 
-  <script type="module">
-    import { seedDemoReadings } from "./api.js";
+<section class="card">
 
-    document.getElementById("createForm").onsubmit = e => {
-      e.preventDefault();
-      const fd = new FormData(e.target);
-      if (fd.get("password") !== fd.get("confirm")) {
-        alert("Passwords do not match.");
-        return;
-      }
-      const patient = {
-        patient_id: fd.get("patient_id").trim(),
-        name: fd.get("name"),
-        email: fd.get("email"),
-        password: fd.get("password")
-      };
-      localStorage.setItem(
-        `patient_${patient.patient_id}`,
-        JSON.stringify(patient)
-      );
-      seedDemoReadings(patient.patient_id);
-      alert("Patient created. You can now log in.");
-      location.href = "index.html";
-    };
-  </script>
+    <label>Name</label>
+    <input id="pname">
+
+    <label>Email</label>
+    <input id="pemail">
+
+    <label>Password</label>
+    <input id="ppass" type="password">
+
+    <button onclick="create()">Create Account</button>
+</section>
+
+<script src="ui.js"></script>
+<script src="auth.js"></script>
+
+<script>
+function create() {
+    const id = registerPatient(
+        qs('#pname').value,
+        qs('#pemail').value,
+        qs('#ppass').value
+    );
+
+    alert('Account created. Your ID: ' + id);
+    go('index.html');
+}
+</script>
+
 </body>
 </html>
