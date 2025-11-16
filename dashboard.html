@@ -5,12 +5,14 @@
   <title>RPM Prototype – Dashboard</title>
   <link rel="stylesheet" href="./styles.css" />
 </head>
+
 <body>
 <header class="app-header">
   <div class="header-left">
     <img src="./logo.png" class="logo" alt="App logo" />
     <strong>RPM Prototype</strong>
   </div>
+
   <nav class="header-nav">
     <a class="active" href="dashboard.html">Home</a>
     <a href="trends.html">Trends</a>
@@ -21,14 +23,127 @@
 </header>
 
 <main class="container">
-  <div id="app"></div>
+  <section class="card">
+    <div class="row between">
+      <h2 id="dashTitle">Dashboard</h2>
+      <span id="welcome"></span>
+    </div>
+
+    <!-- Patient view -->
+    <div id="patientView" style="display:none;">
+      <div class="kpi-row">
+        <div class="kpi-card">
+          <h3>Blood Pressure</h3>
+          <p id="kpiBP">–</p>
+        </div>
+        <div class="kpi-card">
+          <h3>Heart Rate</h3>
+          <p id="kpiHR">–</p>
+        </div>
+        <div class="kpi-card">
+          <h3>Steps</h3>
+          <p id="kpiSteps">–</p>
+        </div>
+      </div>
+      <p id="patientNote" style="margin-top:1rem;"></p>
+    </div>
+
+    <!-- Provider view -->
+    <div id="providerView" style="display:none;">
+      <h3>Patient Updates</h3>
+      <table class="table">
+        <thead>
+        <tr>
+          <th>Patient ID</th>
+          <th>BP (S/D)</th>
+          <th>Heart Rate</th>
+          <th>Steps</th>
+          <th>Reading Date</th>
+          <th>Details</th>
+        </tr>
+        </thead>
+        <tbody id="providerTable">
+        <tr><td colspan="6">Loading...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
 </main>
 
 <script type="module">
-  import "./router.js";
-  import { initDashboard } from "./ui.js";
-  initDashboard();
+  import { currentUser } from "./auth.js";
+  import { getPatients, getReadingsById } from "./api.js";
+
+  const user = currentUser();
+  const logoutBtn = document.getElementById("logoutBtn");
+  if (logoutBtn) {
+    logoutBtn.addEventListener("click", () => {
+      localStorage.removeItem("currentUser");
+      window.location.href = "index.html";
+    });
+  }
+
+  const welcome = document.getElementById("welcome");
+  welcome.textContent = user ? `Hello, ${user.name || user.id}` : "";
+
+  if (user.role === "patient") {
+    document.getElementById("patientView").style.display = "block";
+    loadPatientDashboard(user.id);
+  } else {
+    document.getElementById("providerView").style.display = "block";
+    loadProviderDashboard();
+  }
+
+  async function loadPatientDashboard(pid) {
+    const readings = await getReadingsById(pid);
+    const note = document.getElementById("patientNote");
+
+    if (!readings || readings.length === 0) {
+      note.textContent = "No readings available yet. Once your devices send data, your vitals will appear here.";
+      return;
+    }
+
+    // pick latest (sorted by date)
+    readings.sort((a, b) => a.date.localeCompare(b.date));
+    const latest = readings[readings.length - 1];
+
+    document.getElementById("kpiBP").textContent =
+      `${latest.bp_systolic}/${latest.bp_diastolic} mmHg`;
+    document.getElementById("kpiHR").textContent = `${latest.hr} bpm`;
+    document.getElementById("kpiSteps").textContent = `${latest.steps.toLocaleString()} steps`;
+    note.textContent = `Latest reading date: ${latest.date}`;
+  }
+
+  async function loadProviderDashboard() {
+    const patients = await getPatients();
+    const tbody = document.getElementById("providerTable");
+
+    let html = "";
+
+    for (const p of patients) {
+      const readings = await getReadingsById(p.id);
+      if (!readings || readings.length === 0) continue;
+
+      readings.sort((a, b) => a.date.localeCompare(b.date));
+      const latest = readings[readings.length - 1];
+
+      html += `
+        <tr>
+          <td>${p.id}</td>
+          <td>${latest.bp_systolic}/${latest.bp_diastolic}</td>
+          <td>${latest.hr}</td>
+          <td>${latest.steps}</td>
+          <td>${latest.date}</td>
+          <td><a href="patient-detail.html?pid=${p.id}">View</a></td>
+        </tr>`;
+    }
+
+    if (html === "") {
+      tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;padding:20px;">No patients with readings.</td></tr>`;
+    } else {
+      tbody.innerHTML = html;
+    }
+  }
 </script>
 </body>
 </html>
-
