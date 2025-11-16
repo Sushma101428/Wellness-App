@@ -1,58 +1,49 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-  <meta charset="UTF-8" />
-  <title>RPM Prototype – Trends</title>
-  <link rel="stylesheet" href="./styles.css" />
+    <title>Trends</title>
+    <link rel="stylesheet" href="styles.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 
 <body>
-<header class="app-header">
-  <div class="header-left">
-    <img src="./logo.png" class="logo" alt="App logo" />
-    <strong>RPM Prototype</strong>
-  </div>
-
-  <nav class="header-nav">
-    <a href="dashboard.html">Home</a>
-    <a class="active" href="trends.html">Trends</a>
-    <a href="alerts.html">Alerts</a>
-    <a href="profile.html">Profile</a>
-    <button id="logoutBtn" class="btn-ghost">Log out</button>
-  </nav>
+<header>
+    <img src="logo.png" class="logo">
+    <h2>Vital Trends</h2>
 </header>
 
-<main class="container">
-  <section class="card">
-    <div class="row between">
-      <h2>Trends</h2>
-      <a href="dashboard.html" class="btn-light">Home</a>
-    </div>
+<nav class="nav">
+    <a href="dashboard.html">Home</a>
+    <a href="alerts.html">Alerts</a>
+    <a href="trends.html" class="active">Trends</a>
+    <a href="log-symptom.html">Log Symptoms</a>
+    <a href="profile.html">Profile</a>
+    <a onclick="logout()">Logout</a>
+</nav>
 
-    <div class="btn-group">
-      <button id="btnBP" class="btn-pill active">Blood Pressure</button>
-      <button id="btnHR" class="btn-pill">Heart Rate</button>
-      <button id="btnGlucose" class="btn-pill">Glucose</button>
-      <button id="btnSteps" class="btn-pill">Steps</button>
-    </div>
+<section class="card">
+    <canvas id="bp"></canvas>
+    <canvas id="hr"></canvas>
+    <canvas id="glucose"></canvas>
+</section>
 
-    <p id="noDataMsg" style="margin-top: 1rem;">Loading...</p>
-    <canvas id="trendChart" height="120"></canvas>
-  </section>
-</main>
+<script src="ui.js"></script>
+<script src="auth.js"></script>
+<script src="api.js"></script>
+<script src="charts.js"></script>
 
-<!-- Chart.js CDN -->
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<script type="module" src="./charts.js"></script>
 <script>
-  // simple logout
-  const logoutBtn = document.getElementById("logoutBtn");
-  if (logoutBtn) {
-    logoutBtn.addEventListener("click", () => {
-      localStorage.removeItem("currentUser");
-      window.location.href = "index.html";
-    });
-  }
+(async () => {
+    const user = JSON.parse(localStorage.getItem("activeUser"));
+    const vitals = await getVitals(user.id);
+
+    const labels = vitals.map(v => v.date);
+
+    createLineChart("bp", labels, vitals.map(v => v.bp_systolic), "Systolic BP");
+    createLineChart("hr", labels, vitals.map(v => v.hr), "Heart Rate");
+    createLineChart("glucose", labels, vitals.map(v => v.glucose), "Glucose");
+})();
 </script>
+
 </body>
 </html>
