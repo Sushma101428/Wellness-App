@@ -1,27 +1,62 @@
-// auth.js
+// ===============================
+//   LOAD MOCK USERS
+// ===============================
+import { getPatients, getProviders } from "./api.js";
 
-export function login(user) {
-  localStorage.setItem("rpm_user", JSON.stringify(user));
+// save current user in localStorage
+export function setCurrentUser(user) {
+  localStorage.setItem("currentUser", JSON.stringify(user));
 }
 
+// read current user
 export function currentUser() {
-  const raw = localStorage.getItem("rpm_user");
-  return raw ? JSON.parse(raw) : null;
+  return JSON.parse(localStorage.getItem("currentUser"));
 }
 
+// logout
 export function logout() {
-  localStorage.removeItem("rpm_user");
-  location.href = "index.html";
+  localStorage.removeItem("currentUser");
+  window.location.href = "index.html";
 }
 
-export function requireAuth() {
-  const path = location.pathname;
-  const isLogin =
-    path.endsWith("/") ||
-    path.endsWith("/index.html") ||
-    path.endsWith("index.html");
+// ===============================
+//   LOGIN FUNCTION
+// ===============================
+export async function loginUser(id, password, role) {
+  // 1) MOCK USERS FROM JSON
+  let mockUsers = [];
 
-  if (!isLogin && !currentUser()) {
-    location.href = "index.html";
+  if (role === "patient") {
+    mockUsers = await getPatients();
+  } else {
+    mockUsers = await getProviders();
   }
+
+  // 2) NEW USERS CREATED (LOCALSTORAGE)
+  let newUsers = JSON.parse(localStorage.getItem("users") || "[]");
+
+  // Only include new users of the same role
+  newUsers = newUsers.filter((u) => u.role === role);
+
+  // 3) COMBINE USERS
+  const allUsers = [...mockUsers, ...newUsers];
+
+  // 4) FIND USER
+  const user = allUsers.find((u) => u.id == id && u.password == password);
+
+  if (!user) return null;
+
+  // 5) LOGIN SUCCESS → save & redirect
+  setCurrentUser(user);
+  return user;
 }
+
+// ===============================
+//   REGISTER NEW USER
+// ===============================
+export function registerUser(newUser) {
+  const users = JSON.parse(localStorage.getItem("users") || "[]");
+  users.push(newUser);
+  localStorage.setItem("users", JSON.stringify(users));
+}
+
