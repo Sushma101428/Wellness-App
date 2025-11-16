@@ -1,16 +1,10 @@
 [
   {
-    "provider_id": "P9001",
-    "name": "Dr. Neha Sharma",
-    "email": "neha.sharma@example.com",
-    "phone": "555-2100",
-    "password": "doc123"
-  },
-  {
-    "provider_id": "P9002",
-    "name": "PA Marcus Lee",
-    "email": "marcus.lee@example.com",
-    "phone": "555-2101",
-    "password": "pa2222"
+    "id": "2001",
+    "name": "Dr. Sarah Johnson",
+    "email": "provider@health.com",
+    "password": "12345",
+    "specialization": "General Physician"
   }
 ]
+
