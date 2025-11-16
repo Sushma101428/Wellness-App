@@ -11,11 +11,11 @@
   {
     "patient_id": "1001",
     "date": "2025-11-14",
-    "bp_systolic": 141,
-    "bp_diastolic": 92,
+    "bp_systolic": 138,
+    "bp_diastolic": 88,
     "hr": 76,
-    "glucose": 114,
-    "steps": 8123
+    "glucose": 110,
+    "steps": 6400
   },
   {
     "patient_id": "1002",
@@ -36,4 +36,3 @@
     "steps": 6120
   }
 ]
-
