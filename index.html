@@ -4,192 +4,114 @@
   <meta charset="UTF-8" />
   <title>RPM Prototype – Login</title>
   <link rel="stylesheet" href="./styles.css" />
+
+  <style>
+    body {
+      background: #f5f7fb;
+      font-family: Arial, sans-serif;
+    }
+    .login-container {
+      width: 380px;
+      margin: 80px auto;
+      background: white;
+      padding: 2rem;
+      border-radius: 14px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+      text-align: center;
+    }
+    .login-container img {
+      width: 80px;
+      margin-bottom: 1rem;
+    }
+    input, select {
+      width: 100%;
+      padding: 10px;
+      margin: 8px 0;
+      border-radius: 8px;
+      border: 1px solid #ccc;
+      font-size: 15px;
+    }
+    .btn-primary {
+      width: 100%;
+      padding: 12px;
+      margin-top: 15px;
+      background: #4B74FF;
+      color: white;
+      font-size: 16px;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+    .btn-primary:hover {
+      background: #3A5FD9;
+    }
+    .role-box {
+      display: flex;
+      justify-content: space-between;
+      margin: 10px 0;
+      padding: 10px;
+      background: #eef2ff;
+      border-radius: 8px;
+    }
+    .bottom-links {
+      margin-top: 20px;
+    }
+    .bottom-links a {
+      color: #4B74FF;
+      text-decoration: none;
+      font-size: 14px;
+    }
+  </style>
 </head>
-<body class="auth-body">
-  <main class="auth-card">
-    <img src="./logo.png" class="logo-large" alt="App logo" />
-    <h1 class="text-center">Sign in</h1>
 
-    <form id="loginForm" class="mt-12">
-      <label>
-        Role
-        <select name="role" id="roleSel">
-          <option value="patient">Patient</option>
-          <option value="provider">Provider</option>
-        </select>
-      </label>
+<body>
 
-      <div id="patientFields" class="mt-8">
-        <label>
-          Patient ID
-          <input name="patient_id" placeholder="e.g., 1001" required />
-        </label>
-        <label class="mt-8">
-          Password
-          <input
-            name="patient_pwd"
-            type="password"
-            placeholder="Your password"
-            required
-          />
-        </label>
-      </div>
+<div class="login-container">
+  <img src="./logo.png" alt="Logo" />
 
-      <div id="providerFields" class="mt-8" style="display:none">
-        <label>
-          Provider ID
-          <input name="provider_id" placeholder="e.g., P9001" />
-        </label>
-        <label class="mt-8">
-          Password
-          <input
-            name="provider_pwd"
-            type="password"
-            placeholder="Your password"
-          />
-        </label>
-      </div>
+  <h2>RPM Prototype Login</h2>
 
-      <button type="submit" class="btn-primary mt-12" style="width:100%">
-        Sign in
-      </button>
-    </form>
+  <input type="text" id="loginId" placeholder="User ID" />
+  <input type="password" id="loginPassword" placeholder="Password" />
 
-    <p id="newAccountRow" class="text-center mt-12 muted" style="font-size:0.9rem">
-      New Patient? <a href="create-account.html">Create account</a>
-    </p>
-
-    <p id="forgotRow" class="text-center mt-8 muted" style="font-size:0.85rem; display:none">
-      <span class="link" id="forgotLink">Forgot password?</span>
-    </p>
-  </main>
-
-  <!-- Invalid password modal -->
-  <div class="modal-backdrop" id="invalidModal">
-    <div class="modal">
-      <h3>Invalid password</h3>
-      <p>Please check your ID and password and try again.</p>
-      <div class="modal-actions">
-        <button id="invalidOk" class="btn-primary">OK</button>
-      </div>
-    </div>
+  <div class="role-box">
+    <label><input type="radio" name="role" value="patient" checked /> Patient</label>
+    <label><input type="radio" name="role" value="provider" /> Provider</label>
   </div>
 
-  <!-- Forgot password modal -->
-  <div class="modal-backdrop" id="forgotModal">
-    <div class="modal">
-      <h3>Reset Password</h3>
-      <p>Enter your account email. We’ll send a reset link (demo).</p>
-      <label class="mt-8">
-        Email
-        <input id="fpEmail" type="email" placeholder="you@example.com" />
-      </label>
-      <div class="modal-actions">
-        <button id="fpCancel" class="btn-ghost">Cancel</button>
-        <button id="fpSend" class="btn-primary">Send Link</button>
-      </div>
-    </div>
+  <button id="loginBtn" class="btn-primary">Login</button>
+
+  <div class="bottom-links">
+    <p><a href="create-account.html">Create Patient Account</a></p>
+    <p><a href="create-provider.html">Create Provider Account</a></p>
   </div>
+</div>
 
-  <script type="module">
-    import { login } from "./auth.js";
-    import { getPatient, getProvider } from "./api.js";
+<!-- LOGIN LOGIC -->
+<script type="module">
+import { loginUser } from "./auth.js";
 
-    const roleSel = document.getElementById("roleSel");
-    const patientFields = document.getElementById("patientFields");
-    const providerFields = document.getElementById("providerFields");
-    const newRow = document.getElementById("newAccountRow");
-    const forgotRow = document.getElementById("forgotRow");
-    const forgotLink = document.getElementById("forgotLink");
+document.getElementById("loginBtn").addEventListener("click", async () => {
+    const id = document.getElementById("loginId").value.trim();
+    const password = document.getElementById("loginPassword").value.trim();
+    const role = document.querySelector("input[name='role']:checked").value;
 
-    const invalidModal = document.getElementById("invalidModal");
-    const invalidOk = document.getElementById("invalidOk");
-    const forgotModal = document.getElementById("forgotModal");
-    const fpEmail = document.getElementById("fpEmail");
-    const fpCancel = document.getElementById("fpCancel");
-    const fpSend = document.getElementById("fpSend");
-
-    function openModal(el) { el.style.display = "flex"; }
-    function closeModal(el) { el.style.display = "none"; }
-
-    function attemptsKey(role) {
-      return role === "patient" ? "attempts_patient" : "attempts_provider";
-    }
-
-    function getAttempts(role) {
-      return Number(localStorage.getItem(attemptsKey(role)) || "0");
-    }
-
-    function incAttempts(role) {
-      const n = getAttempts(role) + 1;
-      localStorage.setItem(attemptsKey(role), String(n));
-      if (n >= 3) forgotRow.style.display = "block";
-    }
-
-    function resetAttempts(role) {
-      localStorage.removeItem(attemptsKey(role));
-      forgotRow.style.display = "none";
-    }
-
-    function updateRoleUI() {
-      const role = roleSel.value;
-      if (role === "patient") {
-        patientFields.style.display = "block";
-        providerFields.style.display = "none";
-        newRow.innerHTML = 'New Patient? <a href="create-account.html">Create account</a>';
-      } else {
-        patientFields.style.display = "none";
-        providerFields.style.display = "block";
-        newRow.innerHTML = 'New Provider? <a href="create-provider.html">Create provider</a>';
-      }
-      const n = getAttempts(role);
-      forgotRow.style.display = n >= 3 ? "block" : "none";
-    }
-    roleSel.addEventListener("change", updateRoleUI);
-    updateRoleUI();
-
-    document.getElementById("loginForm").addEventListener("submit", async e => {
-      e.preventDefault();
-      const role = roleSel.value;
-
-      if (role === "patient") {
-        const id = e.target.patient_id.value.trim();
-        const pw = e.target.patient_pwd.value;
-        const p = await getPatient(id);
-        if (!p || String(p.password) !== String(pw)) {
-          incAttempts("patient");
-          openModal(invalidModal);
-          return;
-        }
-        resetAttempts("patient");
-        login({ id, role: "patient", name: p.name });
-      } else {
-        const id = e.target.provider_id.value.trim();
-        const pw = e.target.provider_pwd.value;
-        const pr = await getProvider(id);
-        if (!pr || String(pr.password) !== String(pw)) {
-          incAttempts("provider");
-          openModal(invalidModal);
-          return;
-        }
-        resetAttempts("provider");
-        login({ id, role: "provider", name: pr.name });
-      }
-
-      location.href = "dashboard.html";
-    });
-
-    invalidOk.onclick = () => closeModal(invalidModal);
-    forgotLink.onclick = () => openModal(forgotModal);
-    fpCancel.onclick = () => closeModal(forgotModal);
-    fpSend.onclick = () => {
-      if (!fpEmail.value.trim()) {
-        alert("Please enter your email.");
+    if (!id || !password) {
+        alert("Please enter ID and password.");
         return;
-      }
-      closeModal(forgotModal);
-      alert("If an account exists, a reset link has been sent (demo).");
-    };
-  </script>
+    }
+
+    const user = await loginUser(id, password, role);
+
+    if (!user) {
+        alert("Invalid ID or password.");
+        return;
+    }
+
+    // redirect to dashboard
+    window.location.href = "dashboard.html";
+});
+</script>
+
 </body>
 </html>
