@@ -5,12 +5,14 @@
   <title>RPM Prototype – Trends</title>
   <link rel="stylesheet" href="./styles.css" />
 </head>
+
 <body>
 <header class="app-header">
   <div class="header-left">
     <img src="./logo.png" class="logo" alt="App logo" />
     <strong>RPM Prototype</strong>
   </div>
+
   <nav class="header-nav">
     <a href="dashboard.html">Home</a>
     <a class="active" href="trends.html">Trends</a>
@@ -24,27 +26,33 @@
   <section class="card">
     <div class="row between">
       <h2>Trends</h2>
-      <a class="btn-ghost" href="dashboard.html">Home</a>
+      <a href="dashboard.html" class="btn-light">Home</a>
     </div>
 
-    <div class="trend-buttons">
-      <button class="trend-btn active" data-type="bp">Blood Pressure</button>
-      <button class="trend-btn" data-type="hr">Heart Rate</button>
-      <button class="trend-btn" data-type="glucose">Glucose</button>
-      <button class="trend-btn" data-type="steps">Steps</button>
+    <div class="btn-group">
+      <button id="btnBP" class="btn-pill active">Blood Pressure</button>
+      <button id="btnHR" class="btn-pill">Heart Rate</button>
+      <button id="btnGlucose" class="btn-pill">Glucose</button>
+      <button id="btnSteps" class="btn-pill">Steps</button>
     </div>
 
-    <div id="chartArea" class="chart-area">
-      Loading…
-    </div>
+    <p id="noDataMsg" style="margin-top: 1rem;">Loading...</p>
+    <canvas id="trendChart" height="120"></canvas>
   </section>
 </main>
 
+<!-- Chart.js CDN -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<script type="module">
-  import "./router.js";
-  import { initTrends } from "./charts.js";
-  initTrends();
+<script type="module" src="./charts.js"></script>
+<script>
+  // simple logout
+  const logoutBtn = document.getElementById("logoutBtn");
+  if (logoutBtn) {
+    logoutBtn.addEventListener("click", () => {
+      localStorage.removeItem("currentUser");
+      window.location.href = "index.html";
+    });
+  }
 </script>
 </body>
 </html>
