@@ -2,18 +2,20 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Patient Detail – RPM</title>
+  <title>RPM Prototype – Patient Detail</title>
   <link rel="stylesheet" href="./styles.css" />
 </head>
+
 <body>
 <header class="app-header">
   <div class="header-left">
     <img src="./logo.png" class="logo" alt="App logo" />
     <strong>RPM Prototype</strong>
   </div>
+
   <nav class="header-nav">
     <a href="dashboard.html">Home</a>
-    <a id="trendsLink" href="#">Trends</a>
+    <a href="trends.html">Trends</a>
     <a href="alerts.html">Alerts</a>
     <a href="profile.html">Profile</a>
     <button id="logoutBtn" class="btn-ghost">Log out</button>
@@ -23,71 +25,92 @@
 <main class="container">
   <section class="card">
     <div class="row between">
-      <h2 id="title">Patient Detail</h2>
-      <a class="btn-ghost" href="dashboard.html">Back</a>
+      <h2 id="patientTitle">Patient Detail</h2>
+      <a href="dashboard.html" class="btn-light">Back</a>
     </div>
 
-    <div id="summary" class="mt-12"></div>
+    <p id="patientInfo"></p>
 
-    <h3 class="mt-16">Symptom Logs</h3>
-    <div id="symptoms" class="mt-8"></div>
+    <h3>Recent Readings</h3>
+    <table class="table">
+      <thead>
+      <tr>
+        <th>Date</th>
+        <th>BP (S/D)</th>
+        <th>Heart Rate</th>
+        <th>Glucose</th>
+        <th>Steps</th>
+      </tr>
+      </thead>
+      <tbody id="readingsTable">
+      <tr><td colspan="5">Loading...</td></tr>
+      </tbody>
+    </table>
+
+    <div style="margin-top:1.5rem;">
+      <a id="trendsLink" class="btn-light">View Trends</a>
+      <a id="alertsLink" class="btn-light">View Alerts</a>
+    </div>
   </section>
 </main>
 
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script type="module">
-  import "./router.js";
-  import { getPatient, getReadings, getSymptoms } from "./api.js";
+  import { getPatientById, getReadingsById } from "./api.js";
 
   const params = new URLSearchParams(location.search);
   const pid = params.get("pid");
-  if (!pid) location.href = "dashboard.html";
 
-  document.getElementById("trendsLink").href = `trends.html?pid=${pid}`;
-
-  async function init() {
-    const p = await getPatient(pid);
-    const readings = await getReadings(pid);
-    const summaryDiv = document.getElementById("summary");
-    document.getElementById("title").textContent = `Patient Detail – ${pid}`;
-
-    if (!readings.length) {
-      summaryDiv.innerHTML = `<p class="muted">No readings found.</p>`;
-    } else {
-      const last = readings.sort((a,b)=>a.date.localeCompare(b.date)).slice(-1)[0];
-      summaryDiv.innerHTML = `
-        <p><strong>Name:</strong> ${p?.name || "—"}</p>
-        <p><strong>Last Reading:</strong> ${last.date}</p>
-        <p><strong>BP:</strong> ${last.bp_systolic}/${last.bp_diastolic}</p>
-        <p><strong>HR:</strong> ${last.hr}</p>
-        <p><strong>Steps:</strong> ${last.steps}</p>
-      `;
-    }
-
-    const logs = getSymptoms(pid);
-    const symDiv = document.getElementById("symptoms");
-    if (!logs.length) {
-      symDiv.innerHTML = `<p class="muted">No symptom logs yet.</p>`;
-    } else {
-      symDiv.innerHTML = `
-        <ul class="list">
-          ${logs
-            .map(
-              l => `<li class="list-item">
-                <div><strong>${l.type}</strong> (${l.severity})</div>
-                <div class="muted" style="font-size:0.85rem">${new Date(
-                  l.timestamp
-                ).toLocaleString()}</div>
-                ${l.notes ? `<div>${l.notes}</div>` : ""}
-              </li>`
-            )
-            .join("")}
-        </ul>
-      `;
-    }
+  const logoutBtn = document.getElementById("logoutBtn");
+  if (logoutBtn) {
+    logoutBtn.addEventListener("click", () => {
+      localStorage.removeItem("currentUser");
+      window.location.href = "index.html";
+    });
   }
 
-  init();
+  document.getElementById("trendsLink").href = `trends.html?pid=${pid}`;
+  document.getElementById("alertsLink").href = `alerts.html?pid=${pid}`;
+
+  if (!pid) {
+    document.getElementById("readingsTable").innerHTML =
+      `<tr><td colspan="5" style="text-align:center;padding:20px;">Missing patient id.</td></tr>`;
+    throw new Error("No pid in URL");
+  }
+
+  const patient = await getPatientById(pid);
+  const readings = await getReadingsById(pid);
+
+  const title = document.getElementById("patientTitle");
+  const info = document.getElementById("patientInfo");
+  const tbody = document.getElementById("readingsTable");
+
+  title.textContent = patient
+    ? `Patient ${patient.id} – ${patient.name}`
+    : `Patient ${pid}`;
+
+  info.textContent = patient
+    ? `Email: ${patient.email}`
+    : "";
+
+  if (!readings || readings.length === 0) {
+    tbody.innerHTML =
+      `<tr><td colspan="5" style="text-align:center;padding:20px;">No readings for this patient.</td></tr>`;
+  } else {
+    // newest first
+    readings.sort((a, b) => b.date.localeCompare(a.date));
+    let html = "";
+    readings.forEach((r) => {
+      html += `
+        <tr>
+          <td>${r.date}</td>
+          <td>${r.bp_systolic}/${r.bp_diastolic}</td>
+          <td>${r.hr}</td>
+          <td>${r.glucose}</td>
+          <td>${r.steps}</td>
+        </tr>`;
+    });
+    tbody.innerHTML = html;
+  }
 </script>
 </body>
 </html>
