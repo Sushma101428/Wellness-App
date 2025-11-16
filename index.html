@@ -1,117 +1,39 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-  <meta charset="UTF-8" />
-  <title>RPM Prototype – Login</title>
-  <link rel="stylesheet" href="./styles.css" />
-
-  <style>
-    body {
-      background: #f5f7fb;
-      font-family: Arial, sans-serif;
-    }
-    .login-container {
-      width: 380px;
-      margin: 80px auto;
-      background: white;
-      padding: 2rem;
-      border-radius: 14px;
-      box-shadow: 0 4px 10px rgba(0,0,0,0.1);
-      text-align: center;
-    }
-    .login-container img {
-      width: 80px;
-      margin-bottom: 1rem;
-    }
-    input, select {
-      width: 100%;
-      padding: 10px;
-      margin: 8px 0;
-      border-radius: 8px;
-      border: 1px solid #ccc;
-      font-size: 15px;
-    }
-    .btn-primary {
-      width: 100%;
-      padding: 12px;
-      margin-top: 15px;
-      background: #4B74FF;
-      color: white;
-      font-size: 16px;
-      border: none;
-      border-radius: 8px;
-      cursor: pointer;
-    }
-    .btn-primary:hover {
-      background: #3A5FD9;
-    }
-    .role-box {
-      display: flex;
-      justify-content: space-between;
-      margin: 10px 0;
-      padding: 10px;
-      background: #eef2ff;
-      border-radius: 8px;
-    }
-    .bottom-links {
-      margin-top: 20px;
-    }
-    .bottom-links a {
-      color: #4B74FF;
-      text-decoration: none;
-      font-size: 14px;
-    }
-  </style>
+    <title>RPM Login</title>
+    <link rel="stylesheet" href="styles.css">
 </head>
 
 <body>
+<header>
+    <img src="logo.png" class="logo">
+    <h2>RPM Care Portal</h2>
+</header>
 
-<div class="login-container">
-  <img src="./logo.png" alt="Logo" />
+<section class="card">
+    <h3>Login</h3>
 
-  <h2>RPM Prototype Login</h2>
+    <label>Role</label>
+    <select id="role">
+        <option value="patient">Patient</option>
+        <option value="provider">Provider</option>
+    </select>
 
-  <input type="text" id="loginId" placeholder="User ID" />
-  <input type="password" id="loginPassword" placeholder="Password" />
+    <label>Email</label>
+    <input id="email" type="email">
 
-  <div class="role-box">
-    <label><input type="radio" name="role" value="patient" checked /> Patient</label>
-    <label><input type="radio" name="role" value="provider" /> Provider</label>
-  </div>
+    <label>Password</label>
+    <input id="password" type="password">
 
-  <button id="loginBtn" class="btn-primary">Login</button>
+    <button onclick="login(qs('#email').value, qs('#password').value, qs('#role').value)">Login</button>
 
-  <div class="bottom-links">
-    <p><a href="create-account.html">Create Patient Account</a></p>
-    <p><a href="create-provider.html">Create Provider Account</a></p>
-  </div>
-</div>
+    <a href="create-account.html">Create Patient Account</a><br>
+    <a href="create-provider.html">Create Provider Account</a>
+</section>
 
-<!-- LOGIN LOGIC -->
-<script type="module">
-import { loginUser } from "./auth.js";
-
-document.getElementById("loginBtn").addEventListener("click", async () => {
-    const id = document.getElementById("loginId").value.trim();
-    const password = document.getElementById("loginPassword").value.trim();
-    const role = document.querySelector("input[name='role']:checked").value;
-
-    if (!id || !password) {
-        alert("Please enter ID and password.");
-        return;
-    }
-
-    const user = await loginUser(id, password, role);
-
-    if (!user) {
-        alert("Invalid ID or password.");
-        return;
-    }
-
-    // redirect to dashboard
-    window.location.href = "dashboard.html";
-});
-</script>
+<script src="ui.js"></script>
+<script src="auth.js"></script>
 
 </body>
 </html>
