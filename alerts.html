@@ -1,130 +1,128 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <title>RPM Prototype – Alerts</title>
-    <link rel="stylesheet" href="./styles.css">
+  <meta charset="UTF-8" />
+  <title>RPM Prototype – Alerts</title>
+  <link rel="stylesheet" href="./styles.css" />
 </head>
 
 <body>
-
 <header class="app-header">
-    <div class="header-left">
-        <img src="./logo.png" class="logo" alt="App logo">
-        <strong>RPM Prototype</strong>
-    </div>
+  <div class="header-left">
+    <img src="./logo.png" class="logo" alt="App logo" />
+    <strong>RPM Prototype</strong>
+  </div>
 
-    <nav class="header-nav">
-        <a href="dashboard.html">Home</a>
-        <a href="trends.html">Trends</a>
-        <a class="active" href="alerts.html">Alerts</a>
-        <a href="profile.html">Profile</a>
-        <button id="logoutBtn" class="btn-ghost">Log out</button>
-    </nav>
+  <nav class="header-nav">
+    <a href="dashboard.html">Home</a>
+    <a href="trends.html">Trends</a>
+    <a class="active" href="alerts.html">Alerts</a>
+    <a href="profile.html">Profile</a>
+    <button id="logoutBtn" class="btn-ghost">Log out</button>
+  </nav>
 </header>
 
 <main class="container">
-    <section class="card">
-        <div class="row between">
-            <h2>Alerts</h2>
-            <a href="dashboard.html" class="btn-light">Home</a>
-        </div>
+  <section class="card">
+    <div class="row between">
+      <h2>Alerts</h2>
+      <a href="dashboard.html" class="btn-light">Home</a>
+    </div>
 
-        <table class="table">
-            <thead>
-                <tr>
-                    <th>Patient</th>
-                    <th>Date</th>
-                    <th>Type</th>
-                    <th>Value</th>
-                </tr>
-            </thead>
-
-            <tbody id="alertsTable">
-                <tr><td colspan="4">Loading...</td></tr>
-            </tbody>
-        </table>
-    </section>
+    <table class="table">
+      <thead>
+      <tr>
+        <th>Patient</th>
+        <th>Date</th>
+        <th>Type</th>
+        <th>Value</th>
+      </tr>
+      </thead>
+      <tbody id="alertsTable">
+      <tr><td colspan="4">Loading...</td></tr>
+      </tbody>
+    </table>
+  </section>
 </main>
 
 <script type="module">
-import { currentUser } from "./auth.js";
-import { getReadingsById } from "./api.js";
+  import { currentUser } from "./auth.js";
+  import { getReadingsById } from "./api.js";
 
-const table = document.getElementById("alertsTable");
+  const table = document.getElementById("alertsTable");
 
-// Identify user
-const user = currentUser();
-const params = new URLSearchParams(location.search);
-let pid = user.role === "patient" ? user.id : params.get("pid");
+  // Logout (simple)
+  const logoutBtn = document.getElementById("logoutBtn");
+  if (logoutBtn) {
+    logoutBtn.addEventListener("click", () => {
+      localStorage.removeItem("currentUser");
+      window.location.href = "index.html";
+    });
+  }
 
-// PROVIDER opened Alerts.html directly
-if (user.role === "provider" && !pid) {
+  const user = currentUser();
+  const params = new URLSearchParams(location.search);
+
+  // Patient ID to show alerts for
+  const pid = user.role === "patient" ? user.id : params.get("pid");
+
+  // Provider opened Alerts directly without selecting a patient
+  if (user.role === "provider" && !pid) {
     table.innerHTML = `
-        <tr>
-            <td colspan="4" style="padding:20px; text-align:center;">
-            Select a patient first from Dashboard → View.
-            </td>
-        </tr>`;
-    return;
-}
+      <tr>
+        <td colspan="4" style="padding:20px; text-align:center;">
+          Select a patient from <strong>Dashboard → View → Alerts</strong>.
+        </td>
+      </tr>`;
+    throw new Error("Provider missing pid");
+  }
 
-// Fetch readings
-let readings = await getReadingsById(pid);
+  const readings = await getReadingsById(pid);
 
-// No readings for this patient
-if (!readings || readings.length === 0) {
+  if (!readings || readings.length === 0) {
     table.innerHTML = `
-        <tr>
-            <td colspan="4" style="padding:20px; text-align:center;">
-            No alerts — no vitals recorded.
-            </td>
-        </tr>`;
+      <tr>
+        <td colspan="4" style="padding:20px; text-align:center;">
+          No alerts — no vitals recorded for this patient.
+        </td>
+      </tr>`;
     return;
-}
+  }
 
-// Determine alerts
-function getAlerts(r) {
+  function getAlerts(r) {
     const rows = [];
-
     if (r.bp_systolic > 140) rows.push(["Systolic BP", r.bp_systolic]);
     if (r.bp_diastolic > 90) rows.push(["Diastolic BP", r.bp_diastolic]);
     if (r.hr > 100) rows.push(["Heart Rate", r.hr]);
     if (r.glucose > 180) rows.push(["Glucose", r.glucose]);
-
     return rows;
-}
+  }
 
-let html = "";
+  let html = "";
 
-// Loop through all readings
-readings.forEach(r => {
+  readings.forEach((r) => {
     const alerts = getAlerts(r);
-
-    alerts.forEach(a => {
-        html += `
+    alerts.forEach(([type, value]) => {
+      html += `
         <tr>
-            <td>${pid}</td>
-            <td>${r.date}</td>
-            <td>${a[0]}</td>
-            <td>${a[1]}</td>
-        </tr>
-        `;
-    });
-});
-
-// No alerts at all
-if (html === "") {
-    table.innerHTML = `
-        <tr>
-            <td colspan="4" style="padding:20px; text-align:center;">
-            No alerts — all vitals normal.
-            </td>
+          <td>${pid}</td>
+          <td>${r.date}</td>
+          <td>${type}</td>
+          <td>${value}</td>
         </tr>`;
-} else {
-    table.innerHTML = html;
-}
+    });
+  });
 
+  if (html === "") {
+    table.innerHTML = `
+      <tr>
+        <td colspan="4" style="padding:20px; text-align:center;">
+          No alerts — all vitals are within limits.
+        </td>
+      </tr>`;
+  } else {
+    table.innerHTML = html;
+  }
 </script>
 </body>
 </html>
