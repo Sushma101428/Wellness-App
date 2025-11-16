@@ -95,7 +95,7 @@ export function seedDemoReadings(patientId) {
       bp_systolic: 128,
       bp_diastolic: 82,
       hr: 78,
-      glucose: 112,
+      glucose: 102,
       steps: 5600
     },
     {
@@ -103,8 +103,8 @@ export function seedDemoReadings(patientId) {
       date: d0,
       bp_systolic: 145,
       bp_diastolic: 92,
-      hr: 112,
-      glucose: 190,
+      hr: 75,
+      glucose: 100,
       steps: 6100
     }
   ];
@@ -128,3 +128,4 @@ export function getSymptoms(patientId) {
     localStorage.getItem(`symptoms_${patientId}`) || "[]"
   ).reverse();
 }
+
