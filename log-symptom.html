@@ -1,70 +1,57 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-  <meta charset="UTF-8" />
-  <title>Log Symptom – RPM</title>
-  <link rel="stylesheet" href="./styles.css" />
+    <title>Log Symptoms</title>
+    <link rel="stylesheet" href="styles.css">
 </head>
+
 <body>
-<header class="app-header">
-  <div class="header-left">
-    <img src="./logo.png" class="logo" alt="App logo" />
-    <strong>RPM Prototype</strong>
-  </div>
-  <nav class="header-nav">
-    <a href="dashboard.html">Home</a>
-    <a href="trends.html">Trends</a>
-    <a href="alerts.html">Alerts</a>
-    <a href="profile.html">Profile</a>
-    <button id="logoutBtn" class="btn-ghost">Log out</button>
-  </nav>
+
+<header>
+    <img src="logo.png" class="logo">
+    <h2>Log Symptoms</h2>
 </header>
 
-<main class="container">
-  <section class="card">
-    <h2>Log Symptom</h2>
+<nav class="nav">
+    <a href="dashboard.html">Home</a>
+    <a href="alerts.html">Alerts</a>
+    <a href="trends.html">Trends</a>
+    <a href="log-symptom.html" class="active">Log Symptoms</a>
+    <a href="profile.html">Profile</a>
+    <a onclick="logout()">Logout</a>
+</nav>
 
-    <form id="symForm" class="mt-12">
-      <label>Symptom
-        <input name="type" placeholder="e.g., Dizziness" required />
-      </label>
-      <label class="mt-8">Notes
-        <textarea name="notes" rows="3" placeholder="Describe your symptom"></textarea>
-      </label>
-      <fieldset class="mt-8">
-        <legend>Severity</legend>
-        <label><input type="radio" name="severity" value="Low" required /> Low</label>
-        <label><input type="radio" name="severity" value="Medium" /> Medium</label>
-        <label><input type="radio" name="severity" value="High" /> High</label>
-      </fieldset>
-    </form>
+<section class="card">
+    <h3>Write your symptoms</h3>
+    <textarea id="sym" rows="5"></textarea>
+    <button onclick="save()">Save</button>
 
-    <div class="mt-12">
-      <button id="saveBtn" class="btn-primary">Save</button>
-      <a href="dashboard.html" class="btn-ghost" style="margin-left:8px">Home</a>
-    </div>
-  </section>
-</main>
+    <h3>Previous Logs</h3>
+    <div id="logs"></div>
+</section>
 
-<script type="module">
-  import "./router.js";
-  import { currentUser } from "./auth.js";
-  import { saveSymptom } from "./api.js";
+<script src="ui.js"></script>
+script src="auth.js"></script>
 
-  const user = currentUser();
-  if (user?.role !== "patient") {
-    alert("Only patients can log symptoms in this demo.");
-    location.href = "dashboard.html";
-  }
+<script>
+function save() {
+    let text = qs("#sym").value;
+    if (!text) return alert("Enter symptoms");
 
-  document.getElementById("saveBtn").onclick = () => {
-    const fd = new FormData(document.getElementById("symForm"));
-    const entry = Object.fromEntries(fd.entries());
-    entry.timestamp = new Date().toISOString();
-    saveSymptom(user.id, entry);
-    alert("Symptom saved.");
-    location.href = "dashboard.html";
-  };
+    let logs = JSON.parse(localStorage.getItem("symLogs") || "[]");
+    logs.push({ date: new Date().toLocaleString(), text });
+    localStorage.setItem("symLogs", JSON.stringify(logs));
+
+    load();
+}
+
+function load() {
+    let logs = JSON.parse(localStorage.getItem("symLogs") || "[]");
+    show("logs", logs.map(l => `<p><b>${l.date}:</b> ${l.text}</p>`).join(""));
+}
+
+load();
 </script>
+
 </body>
 </html>
