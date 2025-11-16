@@ -1,116 +1,56 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-  <meta charset="UTF-8" />
-  <title>RPM Prototype – Patient Detail</title>
-  <link rel="stylesheet" href="./styles.css" />
+    <title>Patient Details</title>
+    <link rel="stylesheet" href="styles.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 
 <body>
-<header class="app-header">
-  <div class="header-left">
-    <img src="./logo.png" class="logo" alt="App logo" />
-    <strong>RPM Prototype</strong>
-  </div>
 
-  <nav class="header-nav">
-    <a href="dashboard.html">Home</a>
-    <a href="trends.html">Trends</a>
-    <a href="alerts.html">Alerts</a>
-    <a href="profile.html">Profile</a>
-    <button id="logoutBtn" class="btn-ghost">Log out</button>
-  </nav>
+<header>
+    <img src="logo.png" class="logo">
+    <h2>Patient Details</h2>
 </header>
 
-<main class="container">
-  <section class="card">
-    <div class="row between">
-      <h2 id="patientTitle">Patient Detail</h2>
-      <a href="dashboard.html" class="btn-light">Back</a>
-    </div>
+<nav class="nav">
+    <a href="dashboard.html">Home</a>
+    <a href="profile.html">Profile</a>
+    <a onclick="logout()">Logout</a>
+</nav>
 
-    <p id="patientInfo"></p>
+<section class="card" id="info"></section>
+<section class="card">
+    <canvas id="bp"></canvas>
+    <canvas id="hr"></canvas>
+    <canvas id="glucose"></canvas>
+</section>
 
-    <h3>Recent Readings</h3>
-    <table class="table">
-      <thead>
-      <tr>
-        <th>Date</th>
-        <th>BP (S/D)</th>
-        <th>Heart Rate</th>
-        <th>Glucose</th>
-        <th>Steps</th>
-      </tr>
-      </thead>
-      <tbody id="readingsTable">
-      <tr><td colspan="5">Loading...</td></tr>
-      </tbody>
-    </table>
+<script src="ui.js"></script>
+<script src="auth.js"></script>
+<script src="api.js"></script>
+<script src="charts.js"></script>
 
-    <div style="margin-top:1.5rem;">
-      <a id="trendsLink" class="btn-light">View Trends</a>
-      <a id="alertsLink" class="btn-light">View Alerts</a>
-    </div>
-  </section>
-</main>
+<script>
+(async () => {
+    let id = localStorage.getItem("viewPatient");
+    let user = await getPatientById(id);
+    let vitals = await getVitals(id);
 
-<script type="module">
-  import { getPatientById, getReadingsById } from "./api.js";
+    show("info", `
+        <p><b>Name:</b> ${user.name}</p>
+        <p><b>Age:</b> ${user.age}</p>
+        <p><b>Gender:</b> ${user.gender}</p>
+        <p><b>Condition:</b> ${user.condition}</p>
+    `);
 
-  const params = new URLSearchParams(location.search);
-  const pid = params.get("pid");
+    const labels = vitals.map(v => v.date);
 
-  const logoutBtn = document.getElementById("logoutBtn");
-  if (logoutBtn) {
-    logoutBtn.addEventListener("click", () => {
-      localStorage.removeItem("currentUser");
-      window.location.href = "index.html";
-    });
-  }
-
-  document.getElementById("trendsLink").href = `trends.html?pid=${pid}`;
-  document.getElementById("alertsLink").href = `alerts.html?pid=${pid}`;
-
-  if (!pid) {
-    document.getElementById("readingsTable").innerHTML =
-      `<tr><td colspan="5" style="text-align:center;padding:20px;">Missing patient id.</td></tr>`;
-    throw new Error("No pid in URL");
-  }
-
-  const patient = await getPatientById(pid);
-  const readings = await getReadingsById(pid);
-
-  const title = document.getElementById("patientTitle");
-  const info = document.getElementById("patientInfo");
-  const tbody = document.getElementById("readingsTable");
-
-  title.textContent = patient
-    ? `Patient ${patient.id} – ${patient.name}`
-    : `Patient ${pid}`;
-
-  info.textContent = patient
-    ? `Email: ${patient.email}`
-    : "";
-
-  if (!readings || readings.length === 0) {
-    tbody.innerHTML =
-      `<tr><td colspan="5" style="text-align:center;padding:20px;">No readings for this patient.</td></tr>`;
-  } else {
-    // newest first
-    readings.sort((a, b) => b.date.localeCompare(a.date));
-    let html = "";
-    readings.forEach((r) => {
-      html += `
-        <tr>
-          <td>${r.date}</td>
-          <td>${r.bp_systolic}/${r.bp_diastolic}</td>
-          <td>${r.hr}</td>
-          <td>${r.glucose}</td>
-          <td>${r.steps}</td>
-        </tr>`;
-    });
-    tbody.innerHTML = html;
-  }
+    createLineChart("bp", labels, vitals.map(v => v.bp_systolic), "BP");
+    createLineChart("hr", labels, vitals.map(v => v.hr), "HR");
+    createLineChart("glucose", labels, vitals.map(v => v.glucose), "Glucose");
+})();
 </script>
+
 </body>
 </html>
