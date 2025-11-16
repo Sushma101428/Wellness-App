@@ -1,38 +1,11 @@
-[
-  {
-    "patient_id": "1001",
-    "date": "2025-11-15",
-    "bp_systolic": 130,
-    "bp_diastolic": 83,
-    "hr": 79,
-    "glucose": 118,
-    "steps": 5320
-  },
-  {
-    "patient_id": "1001",
-    "date": "2025-11-14",
-    "bp_systolic": 138,
-    "bp_diastolic": 88,
-    "hr": 76,
-    "glucose": 110,
-    "steps": 6400
-  },
-  {
-    "patient_id": "1002",
-    "date": "2025-11-15",
-    "bp_systolic": 119,
-    "bp_diastolic": 77,
-    "hr": 72,
-    "glucose": 96,
-    "steps": 4050
-  },
-  {
-    "patient_id": "1002",
-    "date": "2025-11-14",
-    "bp_systolic": 122,
-    "bp_diastolic": 79,
-    "hr": 75,
-    "glucose": 101,
-    "steps": 6120
-  }
-]
+{
+  "1001": [
+    { "date": "2025-11-15", "bp_systolic": 118, "bp_diastolic": 79, "hr": 76, "glucose": 105, "steps": 7120 },
+    { "date": "2025-11-14", "bp_systolic": 120, "bp_diastolic": 80, "hr": 72, "glucose": 98,  "steps": 8400 },
+    { "date": "2025-11-13", "bp_systolic": 115, "bp_diastolic": 76, "hr": 78, "glucose": 110, "steps": 6200 }
+  ],
+  "1002": [
+    { "date": "2025-11-15", "bp_systolic": 119, "bp_diastolic": 78, "hr": 74, "glucose": 102, "steps": 6500 },
+    { "date": "2025-11-14", "bp_systolic": 117, "bp_diastolic": 75, "hr": 70, "glucose": 100, "steps": 7000 }
+  ]
+}
