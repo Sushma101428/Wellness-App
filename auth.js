@@ -1,62 +1,71 @@
-// ===============================
-//   LOAD MOCK USERS
-// ===============================
-import { getPatients, getProviders } from "./api.js";
+// AUTH MODULE — Handles login, logout, create account
 
-// save current user in localStorage
-export function setCurrentUser(user) {
-  localStorage.setItem("currentUser", JSON.stringify(user));
+// Save new patient into localStorage
+function registerPatient(name, email, password) {
+    let list = JSON.parse(localStorage.getItem("newPatients") || "[]");
+    const newId = "P" + Math.floor(1000 + Math.random() * 9000);
+
+    list.push({
+        id: newId,
+        name,
+        email,
+        password,
+        age: "",
+        gender: "",
+        condition: "Not provided"
+    });
+
+    localStorage.setItem("newPatients", JSON.stringify(list));
+    return newId;
 }
 
-// read current user
-export function currentUser() {
-  return JSON.parse(localStorage.getItem("currentUser"));
+// Save new provider
+function registerProvider(name, email, password, specialization) {
+    let list = JSON.parse(localStorage.getItem("newProviders") || "[]");
+    const newId = "D" + Math.floor(1000 + Math.random() * 9000);
+
+    list.push({
+        id: newId,
+        name,
+        email,
+        password,
+        specialization
+    });
+
+    localStorage.setItem("newProviders", JSON.stringify(list));
+    return newId;
 }
 
-// logout
-export function logout() {
-  localStorage.removeItem("currentUser");
-  window.location.href = "index.html";
+async function login(email, password, role) {
+    // 1. Check mock JSON
+    let users = [];
+
+    if (role === "patient") {
+        users = await fetch("mock-patients.json").then(r => r.json());
+        users = users.concat(JSON.parse(localStorage.getItem("newPatients") || "[]"));
+    } else {
+        users = await fetch("mock-providers.json").then(r => r.json());
+        users = users.concat(JSON.parse(localStorage.getItem("newProviders") || "[]"));
+    }
+
+    const found = users.find(u => u.email === email && u.password === password);
+
+    if (found) {
+        localStorage.setItem("activeUser", JSON.stringify(found));
+        localStorage.setItem("role", role);
+
+        if (role === "patient") {
+            window.location.href = "dashboard.html";
+        } else {
+            window.location.href = "dashboard.html";
+        }
+    } else {
+        alert("Invalid credentials");
+    }
 }
 
-// ===============================
-//   LOGIN FUNCTION
-// ===============================
-export async function loginUser(id, password, role) {
-  // 1) MOCK USERS FROM JSON
-  let mockUsers = [];
-
-  if (role === "patient") {
-    mockUsers = await getPatients();
-  } else {
-    mockUsers = await getProviders();
-  }
-
-  // 2) NEW USERS CREATED (LOCALSTORAGE)
-  let newUsers = JSON.parse(localStorage.getItem("users") || "[]");
-
-  // Only include new users of the same role
-  newUsers = newUsers.filter((u) => u.role === role);
-
-  // 3) COMBINE USERS
-  const allUsers = [...mockUsers, ...newUsers];
-
-  // 4) FIND USER
-  const user = allUsers.find((u) => u.id == id && u.password == password);
-
-  if (!user) return null;
-
-  // 5) LOGIN SUCCESS → save & redirect
-  setCurrentUser(user);
-  return user;
+function logout() {
+    localStorage.removeItem("activeUser");
+    localStorage.removeItem("role");
+    window.location.href = "index.html";
 }
-
-// ===============================
-//   REGISTER NEW USER
-// ===============================
-export function registerUser(newUser) {
-  const users = JSON.parse(localStorage.getItem("users") || "[]");
-  users.push(newUser);
-  localStorage.setItem("users", JSON.stringify(users));
-}
-
