@@ -1,17 +1,16 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8" />
+    <meta charset="UTF-8">
     <title>RPM Prototype – Alerts</title>
-    <link rel="stylesheet" href="./styles.css" />
-    <script type="module" src="./alerts.js"></script>
+    <link rel="stylesheet" href="./styles.css">
 </head>
 
 <body>
 
 <header class="app-header">
     <div class="header-left">
-        <img src="./logo.png" class="logo" alt="App logo" />
+        <img src="./logo.png" class="logo" alt="App logo">
         <strong>RPM Prototype</strong>
     </div>
 
@@ -23,7 +22,6 @@
         <button id="logoutBtn" class="btn-ghost">Log out</button>
     </nav>
 </header>
-
 
 <main class="container">
     <section class="card">
@@ -41,6 +39,7 @@
                     <th>Value</th>
                 </tr>
             </thead>
+
             <tbody id="alertsTable">
                 <tr><td colspan="4">Loading...</td></tr>
             </tbody>
@@ -48,94 +47,84 @@
     </section>
 </main>
 
-
 <script type="module">
 import { currentUser } from "./auth.js";
 import { getReadingsById } from "./api.js";
 
+const table = document.getElementById("alertsTable");
+
+// Identify user
 const user = currentUser();
-
-// PATIENT → own ID
-// PROVIDER → require patient selected OR show message
 const params = new URLSearchParams(location.search);
-const pidURL = params.get("pid");
+let pid = user.role === "patient" ? user.id : params.get("pid");
 
-let pid = user.role === "patient" ? user.id : pidURL;
-
-const tableBody = document.getElementById("alertsTable");
-
-// If provider opened Alerts directly → show message
+// PROVIDER opened Alerts.html directly
 if (user.role === "provider" && !pid) {
-    tableBody.innerHTML = `
+    table.innerHTML = `
         <tr>
             <td colspan="4" style="padding:20px; text-align:center;">
-                Please select a patient from Dashboard → View to see alerts.
+            Select a patient first from Dashboard → View.
             </td>
         </tr>`;
-    throw new Error("Provider missing PID");
+    return;
 }
 
+// Fetch readings
 let readings = await getReadingsById(pid);
 
-// If no readings exist for this patient
+// No readings for this patient
 if (!readings || readings.length === 0) {
-    tableBody.innerHTML = `
+    table.innerHTML = `
         <tr>
             <td colspan="4" style="padding:20px; text-align:center;">
-                No alerts — no vitals recorded for this patient.
+            No alerts — no vitals recorded.
             </td>
         </tr>`;
     return;
 }
 
-// Function to determine alert conditions
-function isAlert(r) {
-    return (
-        r.sbp > 140 ||
-        r.dbp > 90 ||
-        r.hr > 100 ||
-        r.glucose > 180
-    );
-}
+// Determine alerts
+function getAlerts(r) {
+    const rows = [];
 
-let alerts = readings.filter(isAlert);
+    if (r.bp_systolic > 140) rows.push(["Systolic BP", r.bp_systolic]);
+    if (r.bp_diastolic > 90) rows.push(["Diastolic BP", r.bp_diastolic]);
+    if (r.hr > 100) rows.push(["Heart Rate", r.hr]);
+    if (r.glucose > 180) rows.push(["Glucose", r.glucose]);
 
-// If readings exist but no alerts triggered
-if (alerts.length === 0) {
-    tableBody.innerHTML = `
-        <tr>
-            <td colspan="4" style="padding:20px; text-align:center;">
-                No alerts — all vitals are normal.
-            </td>
-        </tr>`;
-    return;
-}
-
-// Helper to print one alert row
-function row(r, type, value) {
-    return `
-        <tr>
-            <td>${pid}</td>
-            <td>${r.date}</td>
-            <td>${type}</td>
-            <td>${value}</td>
-        </tr>`;
+    return rows;
 }
 
 let html = "";
 
-// Loop through readings & generate individual alerts
-alerts.forEach(r => {
-    if (r.sbp > 140) html += row(r, "Systolic BP", r.sbp);
-    if (r.dbp > 90) html += row(r, "Diastolic BP", r.dbp);
-    if (r.hr > 100) html += row(r, "Heart Rate", r.hr);
-    if (r.glucose > 180) html += row(r, "Glucose", r.glucose);
+// Loop through all readings
+readings.forEach(r => {
+    const alerts = getAlerts(r);
+
+    alerts.forEach(a => {
+        html += `
+        <tr>
+            <td>${pid}</td>
+            <td>${r.date}</td>
+            <td>${a[0]}</td>
+            <td>${a[1]}</td>
+        </tr>
+        `;
+    });
 });
 
-tableBody.innerHTML = html;
+// No alerts at all
+if (html === "") {
+    table.innerHTML = `
+        <tr>
+            <td colspan="4" style="padding:20px; text-align:center;">
+            No alerts — all vitals normal.
+            </td>
+        </tr>`;
+} else {
+    table.innerHTML = html;
+}
 
 </script>
-
 </body>
 </html>
-
