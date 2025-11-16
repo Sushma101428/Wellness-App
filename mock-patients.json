@@ -1,20 +1,21 @@
 [
   {
-    "patient_id": "1001",
-    "name": "Ava Johnson",
-    "age": 46,
+    "id": "1001",
+    "name": "Riya Sharma",
+    "email": "riya@demo.com",
+    "password": "12345",
+    "age": 34,
     "gender": "Female",
-    "email": "ava.johnson@example.com",
-    "phone": "555-0146",
-    "password": "pass1001"
+    "condition": "Hypertension"
   },
   {
-    "patient_id": "1002",
-    "name": "Liam Patel",
-    "age": 53,
+    "id": "1002",
+    "name": "Arjun Patel",
+    "email": "arjun@demo.com",
+    "password": "12345",
+    "age": 40,
     "gender": "Male",
-    "email": "liam.patel@example.com",
-    "phone": "555-0192",
-    "password": "pass1002"
+    "condition": "Diabetes"
   }
 ]
+
